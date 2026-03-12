@@ -1,0 +1,194 @@
+# -*- coding: utf-8 -*-
+"""
+Preprocesado de datos para entrenamiento: normalización y data augmentation.
+
+Este script es el ÚNICO lugar donde se define el preprocesado (rescale 1/255,
+data augmentation: rotación, shift, flip, brillo, zoom, etc.). Tanto
+model_training.py (Transfer Learning) como custom_cnn.py (red desde cero)
+importan los generadores desde aquí y solo se encargan de construir y
+entrenar el modelo; no duplican lógica de preprocesado.
+
+Al ejecutarlo como script: valida train/ y validation/, muestra conteo por
+emoción; opción --data-root para validar otra ruta (repo externo). Paso 3 del flujo.
+Flujo completo: ver README en la raíz del proyecto.
+"""
+import sys
+import argparse
+from pathlib import Path
+
+sys.path.insert(0, str(Path(__file__).resolve().parent))
+
+from tensorflow.keras.preprocessing.image import ImageDataGenerator  # type: ignore
+
+from config import DATA_ROOT, TRAIN_DIR, VALIDATION_DIR, TEST_DIR
+
+# Parámetros de imagen usados en todo el proyecto (captura, transfer, custom_cnn)
+TARGET_SIZE = (224, 224)
+DEFAULT_BATCH_SIZE = 32
+SEED = 42
+
+
+def get_train_datagen():
+    """Generador para entrenamiento: normalización + data augmentation."""
+    return ImageDataGenerator(
+        rescale=1.0 / 255,
+        rotation_range=30,
+        width_shift_range=0.3,
+        height_shift_range=0.3,
+        horizontal_flip=True,
+        vertical_flip=True,
+        brightness_range=[0.7, 1.3],
+        zoom_range=0.3,
+        shear_range=0.3,
+        fill_mode="nearest",
+    )
+
+
+def get_val_datagen():
+    """Generador para validación: solo normalización."""
+    return ImageDataGenerator(rescale=1.0 / 255)
+
+
+def get_test_datagen():
+    """Generador para prueba: solo normalización."""
+    return ImageDataGenerator(rescale=1.0 / 255)
+
+
+def get_train_generator(
+    data_root=None,
+    target_size=TARGET_SIZE,
+    batch_size=DEFAULT_BATCH_SIZE,
+    seed=SEED,
+):
+    """Generador de lotes de entrenamiento. data_root=None usa config.DATA_ROOT."""
+    root = Path(data_root) if data_root is not None else Path(DATA_ROOT)
+    train_dir = root / "train"
+    datagen = get_train_datagen()
+    return datagen.flow_from_directory(
+        str(train_dir),
+        target_size=target_size,
+        batch_size=batch_size,
+        class_mode="categorical",
+        color_mode="rgb",
+        seed=seed,
+    )
+
+
+def get_validation_generator(
+    data_root=None,
+    target_size=TARGET_SIZE,
+    batch_size=DEFAULT_BATCH_SIZE,
+    seed=SEED,
+):
+    """Generador de lotes de validación. data_root=None usa config.DATA_ROOT."""
+    root = Path(data_root) if data_root is not None else Path(DATA_ROOT)
+    val_dir = root / "validation"
+    datagen = get_val_datagen()
+    return datagen.flow_from_directory(
+        str(val_dir),
+        target_size=target_size,
+        batch_size=batch_size,
+        class_mode="categorical",
+        color_mode="rgb",
+        seed=seed,
+    )
+
+
+def get_test_generator(
+    data_root=None,
+    target_size=TARGET_SIZE,
+    batch_size=DEFAULT_BATCH_SIZE,
+    shuffle=False,
+    seed=SEED,
+):
+    """Generador de lotes de prueba. data_root=None usa config.DATA_ROOT."""
+    root = Path(data_root) if data_root is not None else Path(DATA_ROOT)
+    test_dir = root / "test"
+    datagen = get_test_datagen()
+    return datagen.flow_from_directory(
+        str(test_dir),
+        target_size=target_size,
+        batch_size=batch_size,
+        class_mode="categorical",
+        color_mode="rgb",
+        shuffle=shuffle,
+        seed=seed,
+    )
+
+
+def validate_and_report(data_root=None):
+    """Valida que existan train/ y validation/ y muestra conteo por emoción."""
+    root = Path(data_root) if data_root is not None else Path(DATA_ROOT)
+    train_dir = root / "train"
+    val_dir = root / "validation"
+    test_dir = root / "test"
+
+    errors = []
+    if not train_dir.is_dir():
+        errors.append(f"No existe directorio de entrenamiento: {train_dir}")
+    if not val_dir.is_dir():
+        errors.append(f"No existe directorio de validación: {val_dir}")
+
+    if errors:
+        for e in errors:
+            print(e)
+        return False
+
+    def count_per_class(directory):
+        if not directory.is_dir():
+            return {}
+        classes = sorted([p.name for p in directory.iterdir() if p.is_dir()])
+        counts = {}
+        for c in classes:
+            path = directory / c
+            n = len(list(path.glob("*.png")) + list(path.glob("*.jpg")) + list(path.glob("*.jpeg")))
+            counts[c] = n
+        return counts
+
+    print("Preprocesado de datos – validación")
+    print("-" * 50)
+    print(f"Raíz de datos: {root}")
+    print()
+    print("Train:")
+    for cls, n in count_per_class(train_dir).items():
+        print(f"  {cls}: {n} imágenes")
+    print(f"  Total train: {sum(count_per_class(train_dir).values())}")
+    print()
+    print("Validation:")
+    for cls, n in count_per_class(val_dir).items():
+        print(f"  {cls}: {n} imágenes")
+    print(f"  Total validation: {sum(count_per_class(val_dir).values())}")
+    if test_dir.is_dir():
+        print()
+        print("Test:")
+        for cls, n in count_per_class(test_dir).items():
+            print(f"  {cls}: {n} imágenes")
+        print(f"  Total test: {sum(count_per_class(test_dir).values())}")
+    print()
+
+    # Crear generadores y comprobar que cargan
+    try:
+        tg = get_train_generator(data_root=str(root))
+        vg = get_validation_generator(data_root=str(root))
+        print(f"Generadores creados: train {tg.samples} muestras, validation {vg.samples} muestras.")
+        print("Preprocesado listo. Puedes entrenar con model_training.py (Transfer) o custom_cnn.py (red desde cero).")
+    except Exception as e:
+        print(f"Error al crear generadores: {e}")
+        return False
+    return True
+
+
+if __name__ == "__main__":
+    parser = argparse.ArgumentParser(
+        description="Validar datos y comprobar preprocesado (generadores). Por defecto usa data/images/prepared_data."
+    )
+    parser.add_argument(
+        "--data-root",
+        type=str,
+        default=None,
+        help="Ruta a la raíz de datos (carpeta que contiene train/, validation/, test/). "
+        "Si no se indica, se usa config.DATA_ROOT (p. ej. dataset de repo externo).",
+    )
+    args = parser.parse_args()
+    success = validate_and_report(data_root=args.data_root)
+    sys.exit(0 if success else 1)

@@ -1,0 +1,7 @@
+# Reconocimiento de Emociones con CNN - Dependencias
+# Instalación: pip install -r requirements.txt
+
+tensorflow>=2.10
+numpy>=1.21
+opencv-python>=4.5
+scikit-learn>=1.0

@@ -1,0 +1,264 @@
+================================================================================
+  NOTAS TÉCNICAS PARA EL PROFESOR Y ESTUDIANTES
+  Reconocimiento de Emociones - CNN vs Transfer Learning
+================================================================================
+
+Este documento complementa el README: aquí se profundiza en parámetros,
+capas, pesos y épocas de ambos modelos. El README explica el flujo (pasos
+en orden, varias vías, configuraciones); aquí se explica el "por qué"
+técnico para clase y para que los estudiantes puedan experimentar con
+criterio (cambiar épocas, learning rate, tipo de modelo, etc.).
+
+En entornos reales (visión por computador, reconocimiento facial) se usan
+estos mismos conceptos: preprocesado unificado, Transfer Learning o redes
+propias, validación/test separados. El proyecto busca ser realista en ese
+sentido.
+
+
+1. ÉPOCAS: CUÁNTAS Y POR QUÉ
+-----------------------------
+  • No hay un número "correcto" universal: depende del tamaño del dataset,
+    de la complejidad del modelo y de si usas early stopping.
+
+  Transfer Learning (model_training.py):
+    - Fase 1 (base congelada): hasta 50 épocas. EarlyStopping con
+      patience=10 puede detener antes si val_loss no mejora en 10 épocas.
+    - Fase 2 (fine-tuning): hasta 30 épocas adicionales, con la misma
+      lógica de early stopping.
+    - Por qué más épocas: la base ya está preentrenada; solo entrenamos
+      la cabeza. Aun así, el fine-tuning puede necesitar varias épocas
+      con learning rate bajo (1e-5) para no borrar lo aprendido.
+
+  CNN desde cero (custom_cnn.py):
+    - Hasta 30 épocas (configurable en la variable epochs). EarlyStopping
+      con patience=10 puede terminar antes.
+    - Por qué no tantas como en transfer: con pocos datos, muchas épocas
+      suelen llevar a sobreajuste. La red pequeña converge antes; si no
+      hay mejora en validación, se para.
+
+  Mensaje clave: Las épocas son un LÍMITE MÁXIMO. EarlyStopping hace que
+  el entrenamiento termine cuando la validación deja de mejorar, así que el
+  número real de épocas depende de los datos. Cada proyecto puede usar
+  valores distintos (p. ej. 20, 50, 100) según necesidad; lo importante es
+  no sobreajustar y usar validación para decidir cuándo parar.
+
+
+2. CADA RED SE MODIFICA SEGÚN DATOS Y NECESIDADES
+--------------------------------------------------
+  • Las mismas "recetas" (épocas, learning rate, dropout) no sirven igual
+    para todos los datasets.
+  • Con pocos datos: menos épocas, más regularización (dropout), más data
+    augmentation, y a veces Transfer Learning da mejor resultado.
+  • Con muchos datos: se pueden permitir más épocas, redes más grandes
+    o más fine-tuning.
+  • En este proyecto se usan valores razonables por defecto; los
+    estudiantes pueden cambiar en los scripts:
+    - model_training.py: epochs=50 y epochs=30, patience de EarlyStopping
+      y ReduceLROnPlateau, learning rate (1e-4, 1e-5).
+    - custom_cnn.py: epochs, early_stopping_patience, batch_size,
+      learning_rate, dropout.
+
+
+3. ARQUITECTURA Y CAPAS: TRANSFER vs DESDE CERO
+-----------------------------------------------
+
+  TRANSFER LEARNING (model_training.py)
+  -------------------------------------
+  • Base: EfficientNetB0 preentrenada en ImageNet (clasificación de
+    objetos). Incluye muchas capas convolucionales (bloques MBConv),
+    ya entrenadas para extraer características visuales genéricas.
+  • Se usa include_top=False: se quita la capa densa final de ImageNet
+    (1000 clases) y se sustituye por una cabeza propia para 4 emociones.
+  • Capas añadidas (la "cabeza"):
+    - GlobalAveragePooling2D: reduce cada mapa de características a un
+      valor (promedio), sin parámetros entrenables.
+    - Dense(1024, relu): 1024 neuronas, activación ReLU.
+    - BatchNormalization.
+    - Dropout(0.5): apaga el 50% de las neuronas en entrenamiento para
+      regularizar.
+    - Dense(4, softmax): salida para 4 clases (emociones).
+  • No son las mismas capas que la CNN desde cero: la base de Transfer
+    tiene decenas de capas convolucionales profundas; la CNN desde cero
+    tiene solo 3 bloques convolucionales y luego densas. La "cabeza"
+    (Dense + BN + Dropout + softmax) es conceptualmente similar en
+    función (clasificador final), pero la profundidad y el número de
+    parámetros de la parte convolucional son muy distintos.
+
+
+  CNN DESDE CERO (custom_cnn.py)
+  ------------------------------
+  • Parte convolucional (extracción de características):
+    - Bloque 1: Conv2D(32 filtros, 3×3) → BatchNorm → MaxPooling(2×2)
+      → Dropout(0.25).
+    - Bloque 2: Conv2D(64, 3×3) → BatchNorm → MaxPooling(2×2)
+      → Dropout(0.25).
+    - Bloque 3: Conv2D(128, 3×3) → BatchNorm → MaxPooling(2×2)
+      → Dropout(0.25).
+  • Parte densa (clasificador):
+    - Flatten: convierte los mapas en un vector.
+    - Dense(256, relu) → BatchNorm → Dropout(0.5).
+    - Dense(128, relu) → BatchNorm → Dropout(0.5).
+    - Dense(4, softmax): salida para 4 emociones.
+  • Total: 3 bloques convolucionales + 2 capas densas ocultas + salida.
+    Mucho más pequeña que EfficientNetB0 en número de capas y parámetros.
+
+
+4. PESOS: INICIALIZACIÓN vs PRETRENADOS
+----------------------------------------
+  • CNN desde cero:
+    - Todos los pesos se inicializan al azar (p. ej. He/Glorot por
+      defecto en Keras). La red aprende todo desde cero con tus datos.
+    - Necesita más datos y más épocas para estabilizarse; si hay pocas
+      imágenes, es fácil sobreajustar.
+
+  • Transfer Learning:
+    - Pesos de la base (EfficientNetB0): cargados desde ImageNet, no
+      aleatorios. En la fase 1 están congelados (no se actualizan).
+    - Pesos de la cabeza (GlobalAveragePooling2D + Dense + ...): se
+      inicializan y se entrenan desde la primera época.
+    - En la fase 2 (fine-tuning): se descongelan las últimas capas de la
+      base (aprox. el 20% final) y se entrenan con learning rate bajo
+      (1e-5) para adaptar las características a emociones sin borrar
+      lo que ya sabía la red.
+
+
+5. TABLA COMPARATIVA RÁPIDA
+----------------------------
+  Concepto              | Transfer Learning      | CNN desde cero
+  ----------------------|------------------------|---------------------------
+  Épocas (máx.)         | 50 + 30 (fine-tune)   | 30
+  Early stopping        | Sí (patience=10)       | Sí (patience=10)
+  Parte convolucional  | EfficientNetB0 (~230   | 3 bloques (32→64→128
+                        | capas, ImageNet)       | filtros)
+  Pesos base            | Preentrenados (ImageNet)| Inicialización aleatoria
+  Cabeza/clasificador   | Dense(1024)→BN→Dropout | Dense(256)→Dense(128)→
+                        | →Dense(4)              | Dense(4), con BN y Dropout
+  Learning rate         | 1e-4 luego 1e-5       | 0.0005
+  Batch size            | 32                     | 64
+  Dropout (cabeza)      | 0.5                    | 0.25 (conv), 0.5 (densas)
+  Data augmentation     | Más agresiva (rot 30,  | Más suave (rot 15,
+                        | shift 0.3, zoom, etc.) | shift 0.1, flip)
+
+  En model_training.py puedes cambiar BASE_MODEL_NAME para usar otra base
+  (VGG16, ResNet50, MobileNetV2, DenseNet121). En realtime_emotion_
+  recognition.py usa el mismo nombre en TRANSFER_MODEL_NAME para cargar
+  el modelo correcto.
+
+
+6. QUÉ DESTACAR EN CLASE
+------------------------
+  • Épocas: son un tope máximo; el entrenamiento puede parar antes por
+    early stopping. Se eligen según datos y complejidad del modelo.
+  • Cada red se modifica de forma distinta: no se usan las mismas capas
+    en Transfer que en la CNN desde cero; la base de Transfer es mucho
+    más profunda y con pesos ya entrenados.
+  • Pesos: en Transfer se reutilizan pesos de ImageNet; en la CNN desde
+    cero todo empieza en aleatorio. Por eso Transfer suele necesitar
+    menos datos y menos épocas para dar buen resultado.
+  • Los estudiantes pueden (y deberían) probar a cambiar épocas,
+    learning rate o dropout en los scripts y observar cómo cambia la
+    convergencia y el sobreajuste.
+
+
+7. TIEMPO APROXIMADO DE ENTRENAMIENTO
+--------------------------------------
+  Depende del hardware (CPU vs GPU) y del número de imágenes. Valores
+  orientativos para un dataset de ~500–800 imágenes (train) y early
+  stopping activo:
+
+  Con CPU (portátil o PC sin GPU dedicada):
+  • Transfer Learning (model_training.py): fase 1 + fase 2 suelen ser
+    entre 2 y 6 horas (a veces más si hay muchas imágenes o CPU lenta).
+    EfficientNetB0 es pesado; cada época tarda bastante.
+  • CNN desde cero (custom_cnn.py): entre 15 y 45 minutos para hasta
+    30 épocas. La red es pequeña y cada época es mucho más rápida.
+
+  Con GPU (NVIDIA con CUDA):
+  • Transfer Learning: entre 20 y 60 minutos en total (las dos fases).
+  • CNN desde cero: entre 3 y 15 minutos.
+
+  Resumen: la red desde cero suele ser varias veces más rápida que
+  Transfer (sobre todo en CPU). Si solo tienes CPU, conviene probar
+  primero custom_cnn.py para ver resultados en poco tiempo; luego
+  dejar corriendo model_training.py (Transfer) más rato o en un momento
+  en que no necesites el equipo.
+
+
+8. POR QUÉ TRANSFER ES MÁS TARDADO Y ¿VALE LA PENA? (COSTE-BENEFICIO)
+----------------------------------------------------------------------
+  Por qué tarda más:
+  • EfficientNetB0 tiene muchos más parámetros y capas que la CNN propia.
+    Cada época hace muchas más operaciones (convoluciones, normalización,
+    etc.), sobre todo en la base. Eso implica más tiempo por época.
+
+  ¿Mejora realmente la precisión?
+  • En la práctica, con POCOS datos (p. ej. cientos de imágenes propias),
+    Transfer suele dar mejor precisión que entrenar una red desde cero:
+    la base ya sabe extraer bordes, texturas, formas; solo adaptas la
+    cabeza a tus 4 clases. La red desde cero tiene que aprender todo
+    desde cero y con pocos datos se sobreajusta o no converge bien.
+  • Con MUCHOS datos (decenas de miles de imágenes variadas), una red
+    desde cero bien diseñada puede acercarse o superar a Transfer, pero
+    el coste de entrenamiento sigue siendo alto si la red es grande.
+
+  Coste-beneficio (resumen):
+  • Poco dato + tiempo disponible → Transfer suele compensar: más tiempo
+    de entrenamiento, pero mejor precisión y menos riesgo de sobreajuste.
+  • Poco dato + necesitas resultado rápido o sin GPU → CNN desde cero
+    es una opción válida; puede quedar por debajo en precisión pero
+    sirve para aprender y para demos.
+  • Desventaja clara de la red desde cero con pocos datos: menos
+    precisión y más sensibilidad al tamaño y calidad del dataset. La
+    ventaja: mucho más rápida y más fácil de interpretar (menos capas).
+
+
+9. TRANSFER CON RED PROPIA (NO SOLO EFFICIENTNET)
+-------------------------------------------------
+  Una variante muy interesante para analizar en clase:
+
+  Idea: usar como "modelo preentrenado" no EfficientNet, sino tu propia
+  CNN entrenada en un dataset (A), y luego hacer "transfer" o
+  fine-tuning con otro dataset (B). Así el conocimiento previo es el
+  de tu red, no el de ImageNet.
+
+  Dos flujos posibles:
+
+  A) Entrenar CNN propia con dataset de repositorio → fine-tune (o
+     reentrenar cabeza) con TUS imágenes.
+     • Ventaja: la base ya aprendió características de rostros/emociones
+       del dataset público; tú adaptas a tu cámara, iluminación, gestos.
+     • Útil cuando el repo tiene mucho dato y tú tienes poco pero
+       quieres que el modelo "se parezca" a tu entorno.
+
+  B) Entrenar CNN propia con TUS imágenes → fine-tune con dataset
+     de repositorio.
+     • Ventaja: la base se adaptó primero a tu dominio (tu cara, tu
+       cámara); luego refinas con más variedad del repo para generalizar
+       mejor.
+     • Útil cuando quieres priorizar tu entorno y luego enriquecer con
+       datos públicos.
+
+  Por qué NO hacer "transfer" con el mismo modelo sobre las mismas
+  imágenes con que lo entrenaste: sería seguir entrenando sobre datos
+  que el modelo ya vio; el riesgo de sobreajuste es altísimo y no
+  aporta diversidad. El sentido del transfer es llevar conocimiento
+  de un contexto (dataset A) a otro (dataset B).
+
+  Implementación a grandes rasgos:
+  • Guardas el modelo custom_cnn entrenado en dataset A (ej. repo):
+    model.save("models/custom_trained_on_repo.keras").
+  • Cargas ese modelo, congelas parte de las capas (p. ej. los bloques
+    convolucionales), y entrenas solo las capas densas (o las últimas
+    capas) con dataset B (tus imágenes). Mismo concepto que EfficientNet:
+    base congelada o con lr bajo, cabeza adaptada al nuevo dato.
+  • Puedes hacer el mismo esquema al revés: entrenar primero en tus
+    imágenes, guardar, luego cargar y fine-tunear con el repo.
+
+  Esto les da a los estudiantes una cuarta variante para comparar:
+  1) Transfer con EfficientNet + tus imágenes.
+  2) Transfer con EfficientNet + repo.
+  3) CNN desde cero + repo, luego "transfer" a tus imágenes (red propia).
+  4) CNN desde cero + tus imágenes, luego "transfer" al repo (red propia).
+  Y analizar cuándo conviene cada una según cantidad de datos y objetivo.
+
+================================================================================
