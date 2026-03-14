@@ -1,7 +1,16 @@
-# Reconocimiento de Emociones con CNN - Dependencias
-# Instalación: pip install -r requirements.txt
+# --- Núcleo de Inteligencia Artificial ---
+tensorflow>=2.10.0
+numpy>=1.21.0
 
-tensorflow>=2.10
-numpy>=1.21
-opencv-python>=4.5
-scikit-learn>=1.0
+# --- Procesamiento de Imágenes y Visión Artificial ---
+opencv-python>=4.5.0
+# Pillow es necesaria para que Keras procese formatos de imagen (jpg, png)
+Pillow>=9.0.0
+
+# --- Procesamiento de Datos y Evaluación ---
+scikit-learn>=1.0.0
+# Scipy es requerida por muchas funciones de optimización de redes neuronales
+scipy>=1.7.0
+
+# --- Visualización (Útil para ver gráficas de entrenamiento) ---
+matplotlib>=3.5.0

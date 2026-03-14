@@ -1,0 +1,5 @@
+venv/
+data/
+scripts/__pycache__/
+*.keras
+*.h5

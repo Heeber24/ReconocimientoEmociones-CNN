@@ -4,7 +4,7 @@ Preprocesado de datos para entrenamiento: normalización y data augmentation.
 
 Este script es el ÚNICO lugar donde se define el preprocesado (rescale 1/255,
 data augmentation: rotación, shift, flip, brillo, zoom, etc.). Tanto
-model_training.py (Transfer Learning) como custom_cnn.py (red desde cero)
+train_transfer_imagenet.py (Transfer Learning) como train_cnn_from_scratch.py (red desde cero)
 importan los generadores desde aquí y solo se encargan de construir y
 entrenar el modelo; no duplican lógica de preprocesado.
 
@@ -20,18 +20,27 @@ sys.path.insert(0, str(Path(__file__).resolve().parent))
 
 from tensorflow.keras.preprocessing.image import ImageDataGenerator  # type: ignore
 
-from config import DATA_ROOT, TRAIN_DIR, VALIDATION_DIR, TEST_DIR
+from config import DATA_ROOT, TRAIN_DIR, VALIDATION_DIR, TEST_DIR, IMAGES_ARE_BGR
 
-# Parámetros de imagen usados en todo el proyecto (captura, transfer, custom_cnn)
+# Parámetros de imagen usados en todo el proyecto (captura, transfer ImageNet, CNN desde cero)
 TARGET_SIZE = (224, 224)
 DEFAULT_BATCH_SIZE = 32
 SEED = 42
+
+# Las imágenes guardadas con OpenCV (data_collection) están en BGR; convertimos a RGB para el modelo.
+def bgr_to_rgb(img):
+    return img[..., ::-1].copy()
+
+
+def _preprocess_fn():
+    return bgr_to_rgb if IMAGES_ARE_BGR else None
 
 
 def get_train_datagen():
     """Generador para entrenamiento: normalización + data augmentation."""
     return ImageDataGenerator(
         rescale=1.0 / 255,
+        preprocessing_function=_preprocess_fn(),
         rotation_range=30,
         width_shift_range=0.3,
         height_shift_range=0.3,
@@ -46,12 +55,12 @@ def get_train_datagen():
 
 def get_val_datagen():
     """Generador para validación: solo normalización."""
-    return ImageDataGenerator(rescale=1.0 / 255)
+    return ImageDataGenerator(rescale=1.0 / 255, preprocessing_function=_preprocess_fn())
 
 
 def get_test_datagen():
     """Generador para prueba: solo normalización."""
-    return ImageDataGenerator(rescale=1.0 / 255)
+    return ImageDataGenerator(rescale=1.0 / 255, preprocessing_function=_preprocess_fn())
 
 
 def get_train_generator(
@@ -171,7 +180,7 @@ def validate_and_report(data_root=None):
         tg = get_train_generator(data_root=str(root))
         vg = get_validation_generator(data_root=str(root))
         print(f"Generadores creados: train {tg.samples} muestras, validation {vg.samples} muestras.")
-        print("Preprocesado listo. Puedes entrenar con model_training.py (Transfer) o custom_cnn.py (red desde cero).")
+        print("Preprocesado listo. Puedes entrenar con train_transfer_imagenet.py (Transfer) o train_cnn_from_scratch.py (red desde cero).")
     except Exception as e:
         print(f"Error al crear generadores: {e}")
         return False

@@ -1,8 +1,8 @@
 # -*- coding: utf-8 -*-
 """
 Captura de rostros por webcam para el dataset de emociones.
-Detecta rostros en tiempo real, los redimensiona a 224x224 y los guarda
-por emoción (angry, happy, neutral, surprise). Paso 1 del flujo.
+Detecta rostros en tiempo real, los redimensiona a 224x224 en color (BGR al guardar;
+el preprocesado convierte a RGB para entrenar). Paso 1 del flujo.
 Flujo completo y opciones: ver README en la raíz del proyecto.
 """
 from pathlib import Path
@@ -99,10 +99,10 @@ def capture_faces():
                 (x, y, w, h) = largest_face
                 
                 cv2.rectangle(frame_display, (x, y), (x + w, y + h), (0, 255, 0), 2)
-                
-                face_roi_gray = gray[y:y+h, x:x+w]
-                face_resized = cv2.resize(face_roi_gray, FACE_SIZE, interpolation=cv2.INTER_CUBIC)
-                
+                # Recorte en color (BGR), redimensionar a 224x224. Guardamos en BGR para que al abrir
+                # las imágenes se vean con colores correctos; el preprocesado convierte BGR→RGB al entrenar.
+                face_roi_color = frame[y:y+h, x:x+w]
+                face_resized = cv2.resize(face_roi_color, FACE_SIZE, interpolation=cv2.INTER_CUBIC)
                 image_filename = emotions_path / f"rostro_{emotion_name}_{count}.png"
                 cv2.imwrite(str(image_filename), face_resized)
                 count += 1

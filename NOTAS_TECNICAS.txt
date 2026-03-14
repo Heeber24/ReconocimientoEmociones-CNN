@@ -20,7 +20,7 @@ sentido.
   • No hay un número "correcto" universal: depende del tamaño del dataset,
     de la complejidad del modelo y de si usas early stopping.
 
-  Transfer Learning (model_training.py):
+  Transfer Learning (train_transfer_imagenet.py):
     - Fase 1 (base congelada): hasta 50 épocas. EarlyStopping con
       patience=10 puede detener antes si val_loss no mejora en 10 épocas.
     - Fase 2 (fine-tuning): hasta 30 épocas adicionales, con la misma
@@ -29,7 +29,7 @@ sentido.
       la cabeza. Aun así, el fine-tuning puede necesitar varias épocas
       con learning rate bajo (1e-5) para no borrar lo aprendido.
 
-  CNN desde cero (custom_cnn.py):
+  CNN desde cero (train_cnn_from_scratch.py):
     - Hasta 30 épocas (configurable en la variable epochs). EarlyStopping
       con patience=10 puede terminar antes.
     - Por qué no tantas como en transfer: con pocos datos, muchas épocas
@@ -53,16 +53,16 @@ sentido.
     o más fine-tuning.
   • En este proyecto se usan valores razonables por defecto; los
     estudiantes pueden cambiar en los scripts:
-    - model_training.py: epochs=50 y epochs=30, patience de EarlyStopping
+    - train_transfer_imagenet.py: epochs=50 y epochs=30, patience de EarlyStopping
       y ReduceLROnPlateau, learning rate (1e-4, 1e-5).
-    - custom_cnn.py: epochs, early_stopping_patience, batch_size,
+    - train_cnn_from_scratch.py: epochs, early_stopping_patience, batch_size,
       learning_rate, dropout.
 
 
 3. ARQUITECTURA Y CAPAS: TRANSFER vs DESDE CERO
 -----------------------------------------------
 
-  TRANSFER LEARNING (model_training.py)
+  TRANSFER LEARNING (train_transfer_imagenet.py)
   -------------------------------------
   • Base: EfficientNetB0 preentrenada en ImageNet (clasificación de
     objetos). Incluye muchas capas convolucionales (bloques MBConv),
@@ -85,7 +85,7 @@ sentido.
     parámetros de la parte convolucional son muy distintos.
 
 
-  CNN DESDE CERO (custom_cnn.py)
+  CNN DESDE CERO (train_cnn_from_scratch.py)
   ------------------------------
   • Parte convolucional (extracción de características):
     - Bloque 1: Conv2D(32 filtros, 3×3) → BatchNorm → MaxPooling(2×2)
@@ -139,7 +139,7 @@ sentido.
   Data augmentation     | Más agresiva (rot 30,  | Más suave (rot 15,
                         | shift 0.3, zoom, etc.) | shift 0.1, flip)
 
-  En model_training.py puedes cambiar BASE_MODEL_NAME para usar otra base
+  En train_transfer_imagenet.py puedes cambiar BASE_MODEL_NAME para usar otra base
   (VGG16, ResNet50, MobileNetV2, DenseNet121). En realtime_emotion_
   recognition.py usa el mismo nombre en TRANSFER_MODEL_NAME para cargar
   el modelo correcto.
@@ -167,10 +167,10 @@ sentido.
   stopping activo:
 
   Con CPU (portátil o PC sin GPU dedicada):
-  • Transfer Learning (model_training.py): fase 1 + fase 2 suelen ser
+  • Transfer Learning (train_transfer_imagenet.py): fase 1 + fase 2 suelen ser
     entre 2 y 6 horas (a veces más si hay muchas imágenes o CPU lenta).
     EfficientNetB0 es pesado; cada época tarda bastante.
-  • CNN desde cero (custom_cnn.py): entre 15 y 45 minutos para hasta
+  • CNN desde cero (train_cnn_from_scratch.py): entre 15 y 45 minutos para hasta
     30 épocas. La red es pequeña y cada época es mucho más rápida.
 
   Con GPU (NVIDIA con CUDA):
@@ -179,8 +179,8 @@ sentido.
 
   Resumen: la red desde cero suele ser varias veces más rápida que
   Transfer (sobre todo en CPU). Si solo tienes CPU, conviene probar
-  primero custom_cnn.py para ver resultados en poco tiempo; luego
-  dejar corriendo model_training.py (Transfer) más rato o en un momento
+  primero train_cnn_from_scratch.py para ver resultados en poco tiempo; luego
+  dejar corriendo train_transfer_imagenet.py (Transfer) más rato o en un momento
   en que no necesites el equipo.
 
 
@@ -245,7 +245,7 @@ sentido.
   de un contexto (dataset A) a otro (dataset B).
 
   Implementación a grandes rasgos:
-  • Guardas el modelo custom_cnn entrenado en dataset A (ej. repo):
+  • Guardas el modelo train_cnn_from_scratch entrenado en dataset A (ej. repo):
     model.save("models/custom_trained_on_repo.keras").
   • Cargas ese modelo, congelas parte de las capas (p. ej. los bloques
     convolucionales), y entrenas solo las capas densas (o las últimas

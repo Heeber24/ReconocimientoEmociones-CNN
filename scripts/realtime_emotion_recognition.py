@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 """
 Reconocimiento de emociones en tiempo real con la cámara.
-Carga el modelo entrenado (Transfer o custom_cnn) y muestra la emoción detectada. Paso 5 del flujo.
+Carga el modelo entrenado (Transfer ImageNet o CNN desde cero) y muestra la emoción detectada. Paso 5 del flujo.
 Ajustar TRANSFER_MODEL_NAME o use_custom_cnn según el modelo que hayas usado. Ver README.
 """
 import sys
@@ -15,12 +15,12 @@ from tensorflow.keras.preprocessing.image import img_to_array  # type: ignore
 from config import MODELS_DIR, MODEL_CUSTOM, MODEL_FROM_CUSTOM, EMOTION_LIST
 
 # Qué modelo cargar (elige uno):
-# - Transfer (ImageNet): TRANSFER_MODEL_NAME = "EfficientNetB0", "VGG16", etc.
-# - CNN desde cero: use_custom_cnn = True
-# - Transfer desde tu modelo (transfer_from_custom.py): use_from_custom = True
+# - Transfer (ImageNet): use_custom_cnn = False, TRANSFER_MODEL_NAME = "EfficientNetB0", etc.
+# - CNN desde cero: use_custom_cnn = True  ← si entrenaste con train_cnn_from_scratch
+# - Transfer desde tu modelo: use_from_custom = True
 TRANSFER_MODEL_NAME = "EfficientNetB0"
-use_custom_cnn = False
-use_from_custom = False  # True = modelo guardado por transfer_from_custom.py
+use_custom_cnn = True   # True = cargar emotion_recognition_Personal.keras (CNN desde cero)
+use_from_custom = False
 
 if use_from_custom:
     model_path = MODEL_FROM_CUSTOM
@@ -28,7 +28,13 @@ elif use_custom_cnn:
     model_path = MODEL_CUSTOM
 else:
     model_path = MODELS_DIR / f"emotion_recognition_{TRANSFER_MODEL_NAME}_model.keras"
+
+if not model_path.exists():
+    print(f"Error: No se encontró el modelo en {model_path}")
+    print("Entrena con train_cnn_from_scratch.py (use_custom_cnn=True) o train_transfer_imagenet.py (use_custom_cnn=False).")
+    sys.exit(1)
 model = load_model(str(model_path))
+print("Modelo cargado:", model_path.name)
 
 # Orden alfabético: debe coincidir con las carpetas en train/ (flow_from_directory)
 emotion_labels = EMOTION_LIST

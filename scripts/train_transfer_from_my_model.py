@@ -1,14 +1,15 @@
 # -*- coding: utf-8 -*-
 """
-Transfer Learning usando TU modelo guardado como base.
+Entrena una nueva cabeza usando TU modelo guardado como base.
 
-Cargas un modelo que ya entrenaste (p. ej. custom_cnn o uno de model_training),
-quitas la capa de salida, congelas el resto y entrenas una nueva cabeza.
-El modelo resultante también se guarda en models/. Luego puedes usarlo en
-realtime_emotion_recognition igual que los demás.
+Cargas un modelo que ya entrenaste (p. ej. train_cnn_from_scratch o
+train_transfer_imagenet), quitas la capa de salida, congelas el resto
+y entrenas una nueva cabeza. El resultado se guarda en models/ y puedes
+usarlo en realtime_emotion_recognition como los demás.
 
-Flujo: custom_cnn.py → guarda Personal.keras → este script lo carga como base
-       → entrena nueva cabeza → guarda emotion_recognition_from_custom.keras
+Flujo: train_cnn_from_scratch.py → guarda Personal.keras → este script
+       lo carga como base → entrena nueva cabeza → guarda emotion_recognition_from_custom.keras
+Ver README, caminos 5 y 6.
 """
 import os
 import sys
@@ -25,14 +26,14 @@ from tensorflow.keras.callbacks import EarlyStopping, ModelCheckpoint, ReduceLRO
 from config import TRAIN_DIR, VALIDATION_DIR, TEST_DIR, MODELS_DIR, MODEL_CUSTOM, MODEL_FROM_CUSTOM
 from data_preprocessing import get_train_generator, get_validation_generator, get_test_generator
 
-# ¿Qué modelo cargar como base? Por defecto el de custom_cnn (Personal.keras).
-# Puedes poner aquí otro .keras que tengas en models/ (p. ej. uno de Transfer).
+# ¿Qué modelo cargar como base? Por defecto el de train_cnn_from_scratch (Personal.keras).
+# Puedes poner otro .keras que tengas en models/ (p. ej. uno de train_transfer_imagenet).
 MODEL_AS_BASE = MODEL_CUSTOM
 
 def main():
     if not MODEL_AS_BASE.exists():
         print(f"Error: No existe el modelo base: {MODEL_AS_BASE}")
-        print("Entrena antes custom_cnn.py (o el modelo que quieras usar como base).")
+        print("Entrena antes train_cnn_from_scratch.py (o el modelo que quieras usar como base).")
         sys.exit(1)
 
     for path in [TRAIN_DIR, VALIDATION_DIR, TEST_DIR]:
@@ -43,18 +44,14 @@ def main():
     print("Cargando modelo como base:", MODEL_AS_BASE)
     model = load_model(str(MODEL_AS_BASE))
 
-    # Quitar la última capa (salida) para usar el resto como extractor de características
     model.pop()
-    # Congelar toda la base
     for layer in model.layers:
         layer.trainable = False
 
-    # Generadores (mismo preprocesado que el resto del proyecto)
     train_gen = get_train_generator(target_size=(224, 224), batch_size=32, seed=42)
     val_gen = get_validation_generator(target_size=(224, 224), batch_size=32, seed=42)
     test_gen = get_test_generator(target_size=(224, 224), batch_size=32, shuffle=False, seed=42)
 
-    # Nueva cabeza para las 4 emociones
     model.add(Dense(train_gen.num_classes, activation='softmax'))
     model.compile(
         optimizer=tf.keras.optimizers.Adam(1e-4),
@@ -89,7 +86,7 @@ def main():
     scores = model.evaluate(test_gen)
     print(f"Precisión en test: {scores[1] * 100:.2f}%")
     print(f"Modelo guardado en: {MODEL_FROM_CUSTOM}")
-    print("Para usarlo en tiempo real, en realtime_emotion_recognition.py carga este archivo (emotion_recognition_from_custom.keras).")
+    print("Para usarlo en tiempo real, en realtime_emotion_recognition.py pon use_from_custom = True.")
 
 if __name__ == "__main__":
     main()
