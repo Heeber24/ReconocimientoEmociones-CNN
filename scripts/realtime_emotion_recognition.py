@@ -10,9 +10,8 @@ sys.path.insert(0, str(Path(__file__).resolve().parent))
 import cv2
 import numpy as np
 from keras.models import load_model  # type: ignore
-from tensorflow.keras.preprocessing.image import img_to_array  # type: ignore
 
-from config import MODELS_DIR, MODEL_CUSTOM, MODEL_FROM_CUSTOM, EMOTION_LIST
+from config import MODELS_DIR, MODEL_CUSTOM, MODEL_FROM_CUSTOM, EMOTION_LIST, FACE_SIZE, IMAGES_ARE_BGR, USE_GRAY_ROI
 
 # Qué modelo cargar (elige uno):
 # - Transfer (ImageNet): use_custom_cnn = False, TRANSFER_MODEL_NAME = "EfficientNetB0", etc.
@@ -60,23 +59,32 @@ while cap.isOpened():  # Bucle principal para capturar y procesar fotogramas de 
     faces = faceClassif.detectMultiScale(gray, 1.3, 5)  # Detecta rostros en el fotograma usando el clasificador Haar Cascade
 
     for (x, y, w, h) in faces:  # Itera sobre los rostros detectados
-        roi_gray = gray[y:y + h, x:x + w]  # Extrae la región de interés (ROI) del rostro en escala de grises
-        roi_gray = cv2.resize(roi_gray, (224, 224), interpolation=cv2.INTER_CUBIC)  # Redimensiona el ROI a 224x224 píxeles
-        roi_color = cv2.cvtColor(roi_gray, cv2.COLOR_GRAY2BGR)  # Convierte el ROI a color BGR
-        roi = roi_color.astype("float") / 255.0  # Normaliza los valores de los píxeles del ROI al rango [0, 1]
-        roi = img_to_array(roi)  # Convierte el ROI a un arreglo NumPy
-        roi = np.expand_dims(roi, axis=0)  # Agrega una dimensión al arreglo para que coincida con la entrada del modelo
+        if USE_GRAY_ROI:
+            # Recorte en gris para coincidir mejor con FER2013
+            roi = gray[y:y + h, x:x + w]
+            roi = cv2.resize(roi, FACE_SIZE, interpolation=cv2.INTER_CUBIC)
+            roi = cv2.cvtColor(roi, cv2.COLOR_GRAY2BGR)  # 3 canales (BGR)
+        else:
+            # Recorte en color (webcam)
+            roi = frame[y:y + h, x:x + w]
+            roi = cv2.resize(roi, FACE_SIZE, interpolation=cv2.INTER_CUBIC)  # 3 canales BGR
 
-        if roi.shape == (1, 224, 224, 3):  # Verifica si la forma del ROI es correcta (1, 224, 224, 3)
-            try:
-                prediction = model.predict(roi, verbose=0)  # Realiza la predicción de la emoción usando el modelo cargado (verbose=0 para evitar mensajes innecesarios)
-                emotion_index = np.argmax(prediction)  # Obtiene el índice de la emoción con mayor probabilidad
-                emotion = emotion_labels[emotion_index]  # Obtiene la etiqueta de la emoción correspondiente al índice
-                cv2.putText(frame, emotion, (x, y - 10), cv2.FONT_HERSHEY_SIMPLEX, 0.9, (0, 255, 0), 2)  # Muestra la emoción en el fotograma
-            except Exception as e:  # Captura cualquier excepción que ocurra durante la predicción
-                print(f"Error durante la predicción: {e}")  # Imprime un mensaje de error si ocurre una excepción
-        else:  # Si la forma del ROI no es correcta
-            print(f"Error: Forma de roi incorrecta: {roi.shape}")  # Imprime un mensaje de error indicando la forma incorrecta del ROI
+        roi = roi.astype("float32") / 255.0  # Normaliza al rango [0, 1]
+
+        # Si el entrenamiento convertía BGR->RGB, entonces lo hacemos aquí.
+        # (Para ROI gris, esta operación no cambia nada porque los canales son iguales.)
+        if IMAGES_ARE_BGR:
+            roi = roi[..., ::-1].copy()  # BGR -> RGB
+
+        roi = np.expand_dims(roi, axis=0)  # (1, 224, 224, 3)
+
+        try:
+            prediction = model.predict(roi, verbose=0)
+            emotion_index = int(np.argmax(prediction))
+            emotion = emotion_labels[emotion_index]
+            cv2.putText(frame, emotion, (x, y - 10), cv2.FONT_HERSHEY_SIMPLEX, 0.9, (0, 255, 0), 2)
+        except Exception as e:
+            print(f"Error durante la predicción: {e}")
 
         cv2.rectangle(frame, (x, y), (x + w, y + h), (0, 255, 0), 2)  # Dibuja un rectángulo alrededor del rostro detectado
 

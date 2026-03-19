@@ -145,7 +145,7 @@ sentido.
   el modelo correcto.
 
 
-6. QUÉ DESTACAR EN CLASE
+6. COSAS A DESTACAR 
 ------------------------
   • Épocas: son un tope máximo; el entrenamiento puede parar antes por
     early stopping. Se eligen según datos y complejidad del modelo.
