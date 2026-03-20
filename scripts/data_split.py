@@ -1,9 +1,11 @@
 # -*- coding: utf-8 -*-
 """
 División del dataset en train / validation / test.
-Lee imágenes por carpeta de emoción y reparte en las tres particiones
-manteniendo la estructura. Paso 2 del flujo.
-Flujo completo: ver README en la raíz del proyecto.
+
+Antes de copiar, elimina por completo la carpeta prepared_data para que no queden
+archivos de corridas anteriores. Luego reparte desde DATA_DIR (kaggle_fer o data_collection según USE_KAGGLE_FER).
+
+Paso 2 del flujo (después de tener datos; ver README).
 """
 import shutil
 from pathlib import Path
@@ -11,7 +13,18 @@ import sys
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 from sklearn.model_selection import train_test_split
 
-from config import DATA_COLLECTION as DATA_DIR, PREPARED_DATA as OUTPUT_DIR
+# =============================================================================
+# CONFIGURA AQUÍ — misma USE_KAGGLE_FER que data_preprocessing.py y el camino que corras
+# True  = dividir desde data/kaggle_fer
+# False = dividir desde data/images/data_collection
+# =============================================================================
+PROJECT_ROOT = Path(__file__).resolve().parent.parent
+USE_KAGGLE_FER = False
+DATA_DIR = (PROJECT_ROOT / "data" / "kaggle_fer") if USE_KAGGLE_FER else (
+    PROJECT_ROOT / "data" / "images" / "data_collection"
+)
+OUTPUT_DIR = PROJECT_ROOT / "data" / "images" / "prepared_data"
+# =============================================================================
 
 # --- CONFIGURACIÓN ---
 
@@ -30,12 +43,19 @@ RANDOM_STATE = 42
 def split_dataset():
     """
     Función principal que ejecuta todo el proceso de división del dataset.
+    Siempre elimina la carpeta prepared_data anterior para que el split refleje solo
+    las imágenes actuales en el origen (sin mezclar con corridas viejas).
     """
     # Verificación inicial: nos aseguramos de que el directorio de datos de origen exista.
     if not DATA_DIR.is_dir():
         print(f"Error: El directorio de datos de origen no existe: {DATA_DIR}")
         # sys.exit() detiene la ejecución del script si la carpeta principal no se encuentra.
         sys.exit()
+
+    if OUTPUT_DIR.exists():
+        print(f"Eliminando partición anterior: {OUTPUT_DIR}")
+        shutil.rmtree(OUTPUT_DIR)
+    OUTPUT_DIR.mkdir(parents=True, exist_ok=True)
 
     print(f"Directorio de origen: {DATA_DIR}")
     print(f"Directorio de destino: {OUTPUT_DIR}")

@@ -11,13 +11,17 @@ sys.path.insert(0, str(Path(__file__).resolve().parent))
 import cv2
 import time
 
-from config import DATA_COLLECTION, EMOTION_LIST, FACE_SIZE
-
-## --- CONFIGURACIÓN ---
-DATA_PATH = DATA_COLLECTION
+# =============================================================================
+# CONFIGURA AQUÍ — solo captura para datos propios (carpeta destino)
+# =============================================================================
+PROJECT_ROOT = Path(__file__).resolve().parent.parent
+DATA_PATH = PROJECT_ROOT / "data" / "images" / "data_collection"
+EMOTION_LIST = ["angry", "happy", "neutral", "surprise"]
+FACE_SIZE = (224, 224)
+# =============================================================================
 
 # Número máximo de imágenes a capturar por cada emoción.
-MAX_IMAGES = 50
+MAX_IMAGES = 400
 # --------------------
 
 

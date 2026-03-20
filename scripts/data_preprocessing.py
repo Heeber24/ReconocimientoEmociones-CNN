@@ -4,7 +4,7 @@ Preprocesado de datos para entrenamiento: normalización y data augmentation.
 
 Este script es el ÚNICO lugar donde se define el preprocesado (rescale 1/255,
 data augmentation: rotación, shift, flip, brillo, zoom, etc.). Tanto
-train_transfer_imagenet.py (Transfer Learning) como train_cnn_from_scratch.py (red desde cero)
+los caminos con transfer learning como los caminos de red desde cero
 importan los generadores desde aquí y solo se encargan de construir y
 entrenar el modelo; no duplican lógica de preprocesado.
 
@@ -20,7 +20,18 @@ sys.path.insert(0, str(Path(__file__).resolve().parent))
 
 from tensorflow.keras.preprocessing.image import ImageDataGenerator  # type: ignore
 
-from config import DATA_ROOT, TRAIN_DIR, VALIDATION_DIR, TEST_DIR, IMAGES_ARE_BGR
+# =============================================================================
+# CONFIGURA AQUÍ — misma USE_KAGGLE_FER que data_split.py y el camino que corras
+# =============================================================================
+PROJECT_ROOT = Path(__file__).resolve().parent.parent
+USE_KAGGLE_FER = False
+PREPARED_DATA = PROJECT_ROOT / "data" / "images" / "prepared_data"
+DATA_ROOT = PREPARED_DATA
+TRAIN_DIR = DATA_ROOT / "train"
+VALIDATION_DIR = DATA_ROOT / "validation"
+TEST_DIR = DATA_ROOT / "test"
+IMAGES_ARE_BGR = not USE_KAGGLE_FER  # OpenCV guarda BGR en captura propia; FER no
+# =============================================================================
 
 # Parámetros de imagen usados en todo el proyecto (captura, transfer ImageNet, CNN desde cero)
 TARGET_SIZE = (224, 224)
@@ -45,7 +56,7 @@ def get_train_datagen():
         width_shift_range=0.3,
         height_shift_range=0.3,
         horizontal_flip=True,
-        vertical_flip=True,
+        # vertical_flip=False: no usar en rostros (las caras no son simétricas arriba/abajo)
         brightness_range=[0.7, 1.3],
         zoom_range=0.3,
         shear_range=0.3,
@@ -69,7 +80,7 @@ def get_train_generator(
     batch_size=DEFAULT_BATCH_SIZE,
     seed=SEED,
 ):
-    """Generador de lotes de entrenamiento. data_root=None usa config.DATA_ROOT."""
+    """Generador de lotes de entrenamiento. data_root=None usa DATA_ROOT de este script."""
     root = Path(data_root) if data_root is not None else Path(DATA_ROOT)
     train_dir = root / "train"
     datagen = get_train_datagen()
@@ -89,7 +100,7 @@ def get_validation_generator(
     batch_size=DEFAULT_BATCH_SIZE,
     seed=SEED,
 ):
-    """Generador de lotes de validación. data_root=None usa config.DATA_ROOT."""
+    """Generador de lotes de validación. data_root=None usa DATA_ROOT de este script."""
     root = Path(data_root) if data_root is not None else Path(DATA_ROOT)
     val_dir = root / "validation"
     datagen = get_val_datagen()
@@ -110,7 +121,7 @@ def get_test_generator(
     shuffle=False,
     seed=SEED,
 ):
-    """Generador de lotes de prueba. data_root=None usa config.DATA_ROOT."""
+    """Generador de lotes de prueba. data_root=None usa DATA_ROOT de este script."""
     root = Path(data_root) if data_root is not None else Path(DATA_ROOT)
     test_dir = root / "test"
     datagen = get_test_datagen()
@@ -180,7 +191,7 @@ def validate_and_report(data_root=None):
         tg = get_train_generator(data_root=str(root))
         vg = get_validation_generator(data_root=str(root))
         print(f"Generadores creados: train {tg.samples} muestras, validation {vg.samples} muestras.")
-        print("Preprocesado listo. Puedes entrenar con train_transfer_imagenet.py (Transfer) o train_cnn_from_scratch.py (red desde cero).")
+        print("Preprocesado listo. Puedes entrenar con scripts de paths (generate_model_path_1..6).")
     except Exception as e:
         print(f"Error al crear generadores: {e}")
         return False
@@ -196,7 +207,7 @@ if __name__ == "__main__":
         type=str,
         default=None,
         help="Ruta a la raíz de datos (carpeta que contiene train/, validation/, test/). "
-        "Si no se indica, se usa config.DATA_ROOT (p. ej. dataset de repo externo).",
+        "Si no se indica, se usa DATA_ROOT definido arriba en este script.",
     )
     args = parser.parse_args()
     success = validate_and_report(data_root=args.data_root)

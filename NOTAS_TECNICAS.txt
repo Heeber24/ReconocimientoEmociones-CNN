@@ -1,264 +1,301 @@
 ================================================================================
-  NOTAS TÉCNICAS PARA EL PROFESOR Y ESTUDIANTES
-  Reconocimiento de Emociones - CNN vs Transfer Learning
+NOTAS TECNICAS - AMBIENTE, LIBRERIAS, VENV, COLAB, GPU
 ================================================================================
 
-Este documento complementa el README: aquí se profundiza en parámetros,
-capas, pesos y épocas de ambos modelos. El README explica el flujo (pasos
-en orden, varias vías, configuraciones); aquí se explica el "por qué"
-técnico para clase y para que los estudiantes puedan experimentar con
-criterio (cambiar épocas, learning rate, tipo de modelo, etc.).
+Este archivo NO da por hecho que ya sabes crear entornos virtuales ni usar Colab.
+Si algo falla, copia el mensaje de error y buscalo o pregunta en clase.
 
-En entornos reales (visión por computador, reconocimiento facial) se usan
-estos mismos conceptos: preprocesado unificado, Transfer Learning o redes
-propias, validación/test separados. El proyecto busca ser realista en ese
-sentido.
+No existe config.py en el proyecto: cada script tiene su bloque CONFIGURA.
 
+================================================================================
+1) QUE ES UN ENTORNO VIRTUAL (venv) Y PARA QUE SIRVE
+================================================================================
 
-1. ÉPOCAS: CUÁNTAS Y POR QUÉ
------------------------------
-  • No hay un número "correcto" universal: depende del tamaño del dataset,
-    de la complejidad del modelo y de si usas early stopping.
+Un entorno virtual es una "carpeta de Python aparte" donde se instalan solo las
+librerias de ESTE proyecto (TensorFlow, OpenCV, etc.). Asi:
 
-  Transfer Learning (train_transfer_imagenet.py):
-    - Fase 1 (base congelada): hasta 50 épocas. EarlyStopping con
-      patience=10 puede detener antes si val_loss no mejora en 10 épocas.
-    - Fase 2 (fine-tuning): hasta 30 épocas adicionales, con la misma
-      lógica de early stopping.
-    - Por qué más épocas: la base ya está preentrenada; solo entrenamos
-      la cabeza. Aun así, el fine-tuning puede necesitar varias épocas
-      con learning rate bajo (1e-5) para no borrar lo aprendido.
+  - No rompes el Python que trae Windows u otro programa.
+  - Las versiones de paquetes quedan fijas para este trabajo.
+  - Puedes borrar la carpeta "venv" y empezar de cero si algo se corrompe.
 
-  CNN desde cero (train_cnn_from_scratch.py):
-    - Hasta 30 épocas (configurable en la variable epochs). EarlyStopping
-      con patience=10 puede terminar antes.
-    - Por qué no tantas como en transfer: con pocos datos, muchas épocas
-      suelen llevar a sobreajuste. La red pequeña converge antes; si no
-      hay mejora en validación, se para.
+Si nunca lo has hecho, sigue los pasos de abajo en orden. No saltes pasos.
 
-  Mensaje clave: Las épocas son un LÍMITE MÁXIMO. EarlyStopping hace que
-  el entrenamiento termine cuando la validación deja de mejorar, así que el
-  número real de épocas depende de los datos. Cada proyecto puede usar
-  valores distintos (p. ej. 20, 50, 100) según necesidad; lo importante es
-  no sobreajustar y usar validación para decidir cuándo parar.
+--------------------------------------------------------------------------------
+1.1 Requisito: tener Python instalado
+--------------------------------------------------------------------------------
 
+  - En Windows, al instalar Python marca la opcion "Add Python to PATH" si aparece.
+  - Abre una terminal (PowerShell, CMD o Terminal en Mac/Linux).
 
-2. CADA RED SE MODIFICA SEGÚN DATOS Y NECESIDADES
---------------------------------------------------
-  • Las mismas "recetas" (épocas, learning rate, dropout) no sirven igual
-    para todos los datasets.
-  • Con pocos datos: menos épocas, más regularización (dropout), más data
-    augmentation, y a veces Transfer Learning da mejor resultado.
-  • Con muchos datos: se pueden permitir más épocas, redes más grandes
-    o más fine-tuning.
-  • En este proyecto se usan valores razonables por defecto; los
-    estudiantes pueden cambiar en los scripts:
-    - train_transfer_imagenet.py: epochs=50 y epochs=30, patience de EarlyStopping
-      y ReduceLROnPlateau, learning rate (1e-4, 1e-5).
-    - train_cnn_from_scratch.py: epochs, early_stopping_patience, batch_size,
-      learning_rate, dropout.
+Comprueba que Python responde:
 
+  Windows:
+    py --version
+    o bien:
+    python --version
 
-3. ARQUITECTURA Y CAPAS: TRANSFER vs DESDE CERO
------------------------------------------------
+  Linux / macOS:
+    python3 --version
 
-  TRANSFER LEARNING (train_transfer_imagenet.py)
-  -------------------------------------
-  • Base: EfficientNetB0 preentrenada en ImageNet (clasificación de
-    objetos). Incluye muchas capas convolucionales (bloques MBConv),
-    ya entrenadas para extraer características visuales genéricas.
-  • Se usa include_top=False: se quita la capa densa final de ImageNet
-    (1000 clases) y se sustituye por una cabeza propia para 4 emociones.
-  • Capas añadidas (la "cabeza"):
-    - GlobalAveragePooling2D: reduce cada mapa de características a un
-      valor (promedio), sin parámetros entrenables.
-    - Dense(1024, relu): 1024 neuronas, activación ReLU.
-    - BatchNormalization.
-    - Dropout(0.5): apaga el 50% de las neuronas en entrenamiento para
-      regularizar.
-    - Dense(4, softmax): salida para 4 clases (emociones).
-  • No son las mismas capas que la CNN desde cero: la base de Transfer
-    tiene decenas de capas convolucionales profundas; la CNN desde cero
-    tiene solo 3 bloques convolucionales y luego densas. La "cabeza"
-    (Dense + BN + Dropout + softmax) es conceptualmente similar en
-    función (clasificador final), pero la profundidad y el número de
-    parámetros de la parte convolucional son muy distintos.
+Si dice "no se reconoce el comando", primero instala Python desde python.org
+o desde la tienda de aplicaciones (no sigas hasta que esto funcione).
 
+--------------------------------------------------------------------------------
+1.2 Ir a la carpeta RAIZ del proyecto
+--------------------------------------------------------------------------------
 
-  CNN DESDE CERO (train_cnn_from_scratch.py)
-  ------------------------------
-  • Parte convolucional (extracción de características):
-    - Bloque 1: Conv2D(32 filtros, 3×3) → BatchNorm → MaxPooling(2×2)
-      → Dropout(0.25).
-    - Bloque 2: Conv2D(64, 3×3) → BatchNorm → MaxPooling(2×2)
-      → Dropout(0.25).
-    - Bloque 3: Conv2D(128, 3×3) → BatchNorm → MaxPooling(2×2)
-      → Dropout(0.25).
-  • Parte densa (clasificador):
-    - Flatten: convierte los mapas en un vector.
-    - Dense(256, relu) → BatchNorm → Dropout(0.5).
-    - Dense(128, relu) → BatchNorm → Dropout(0.5).
-    - Dense(4, softmax): salida para 4 emociones.
-  • Total: 3 bloques convolucionales + 2 capas densas ocultas + salida.
-    Mucho más pequeña que EfficientNetB0 en número de capas y parámetros.
+La raiz es donde estan las carpetas "scripts", "data", el archivo "requirements.txt"
+y este NOTAS_TECNICAS.txt.
 
+  Windows (PowerShell):
+    cd ruta\completa\a\ReconocimientoEmociones-CNN
 
-4. PESOS: INICIALIZACIÓN vs PRETRENADOS
-----------------------------------------
-  • CNN desde cero:
-    - Todos los pesos se inicializan al azar (p. ej. He/Glorot por
-      defecto en Keras). La red aprende todo desde cero con tus datos.
-    - Necesita más datos y más épocas para estabilizarse; si hay pocas
-      imágenes, es fácil sobreajustar.
+  Ejemplo si esta en el Escritorio:
+    cd $env:USERPROFILE\Desktop\...\ReconocimientoEmociones-CNN
 
-  • Transfer Learning:
-    - Pesos de la base (EfficientNetB0): cargados desde ImageNet, no
-      aleatorios. En la fase 1 están congelados (no se actualizan).
-    - Pesos de la cabeza (GlobalAveragePooling2D + Dense + ...): se
-      inicializan y se entrenan desde la primera época.
-    - En la fase 2 (fine-tuning): se descongelan las últimas capas de la
-      base (aprox. el 20% final) y se entrenan con learning rate bajo
-      (1e-5) para adaptar las características a emociones sin borrar
-      lo que ya sabía la red.
+  Linux / macOS:
+    cd /ruta/completa/a/ReconocimientoEmociones-CNN
 
+Tip: en el Explorador de Windows puedes escribir "powershell" en la barra de
+direccion de la carpeta del proyecto y se abre la terminal ya ubicada ahi.
 
-5. TABLA COMPARATIVA RÁPIDA
-----------------------------
-  Concepto              | Transfer Learning      | CNN desde cero
-  ----------------------|------------------------|---------------------------
-  Épocas (máx.)         | 50 + 30 (fine-tune)   | 30
-  Early stopping        | Sí (patience=10)       | Sí (patience=10)
-  Parte convolucional  | EfficientNetB0 (~230   | 3 bloques (32→64→128
-                        | capas, ImageNet)       | filtros)
-  Pesos base            | Preentrenados (ImageNet)| Inicialización aleatoria
-  Cabeza/clasificador   | Dense(1024)→BN→Dropout | Dense(256)→Dense(128)→
-                        | →Dense(4)              | Dense(4), con BN y Dropout
-  Learning rate         | 1e-4 luego 1e-5       | 0.0005
-  Batch size            | 32                     | 64
-  Dropout (cabeza)      | 0.5                    | 0.25 (conv), 0.5 (densas)
-  Data augmentation     | Más agresiva (rot 30,  | Más suave (rot 15,
-                        | shift 0.3, zoom, etc.) | shift 0.1, flip)
+--------------------------------------------------------------------------------
+1.3 Crear el entorno virtual (una sola vez por carpeta del proyecto)
+--------------------------------------------------------------------------------
 
-  En train_transfer_imagenet.py puedes cambiar BASE_MODEL_NAME para usar otra base
-  (VGG16, ResNet50, MobileNetV2, DenseNet121). En realtime_emotion_
-  recognition.py usa el mismo nombre en TRANSFER_MODEL_NAME para cargar
-  el modelo correcto.
+Esto crea una subcarpeta llamada "venv" dentro del proyecto.
 
+  Windows:
+    py -m venv venv
+    o si solo te funciona "python":
+    python -m venv venv
 
-6. COSAS A DESTACAR 
-------------------------
-  • Épocas: son un tope máximo; el entrenamiento puede parar antes por
-    early stopping. Se eligen según datos y complejidad del modelo.
-  • Cada red se modifica de forma distinta: no se usan las mismas capas
-    en Transfer que en la CNN desde cero; la base de Transfer es mucho
-    más profunda y con pesos ya entrenados.
-  • Pesos: en Transfer se reutilizan pesos de ImageNet; en la CNN desde
-    cero todo empieza en aleatorio. Por eso Transfer suele necesitar
-    menos datos y menos épocas para dar buen resultado.
-  • Los estudiantes pueden (y deberían) probar a cambiar épocas,
-    learning rate o dropout en los scripts y observar cómo cambia la
-    convergencia y el sobreajuste.
+  Linux / macOS:
+    python3 -m venv venv
 
+Si no da error, deberias ver la carpeta "venv" junto a "scripts" y "data".
 
-7. TIEMPO APROXIMADO DE ENTRENAMIENTO
---------------------------------------
-  Depende del hardware (CPU vs GPU) y del número de imágenes. Valores
-  orientativos para un dataset de ~500–800 imágenes (train) y early
-  stopping activo:
+--------------------------------------------------------------------------------
+1.4 ACTIVAR el entorno virtual (cada vez que abras una terminal nueva)
+--------------------------------------------------------------------------------
 
-  Con CPU (portátil o PC sin GPU dedicada):
-  • Transfer Learning (train_transfer_imagenet.py): fase 1 + fase 2 suelen ser
-    entre 2 y 6 horas (a veces más si hay muchas imágenes o CPU lenta).
-    EfficientNetB0 es pesado; cada época tarda bastante.
-  • CNN desde cero (train_cnn_from_scratch.py): entre 15 y 45 minutos para hasta
-    30 épocas. La red es pequeña y cada época es mucho más rápida.
+Hasta que no actives el venv, "pip install" puede ir al Python del sistema.
+SIEMPRE activa antes de instalar o ejecutar el proyecto.
 
-  Con GPU (NVIDIA con CUDA):
-  • Transfer Learning: entre 20 y 60 minutos en total (las dos fases).
-  • CNN desde cero: entre 3 y 15 minutos.
+  Windows - CMD:
+    venv\Scripts\activate.bat
 
-  Resumen: la red desde cero suele ser varias veces más rápida que
-  Transfer (sobre todo en CPU). Si solo tienes CPU, conviene probar
-  primero train_cnn_from_scratch.py para ver resultados en poco tiempo; luego
-  dejar corriendo train_transfer_imagenet.py (Transfer) más rato o en un momento
-  en que no necesites el equipo.
+  Windows - PowerShell (si da error de politica de ejecucion, usa CMD arriba):
+    venv\Scripts\Activate.ps1
 
+  Linux / macOS:
+    source venv/bin/activate
 
-8. POR QUÉ TRANSFER ES MÁS TARDADO Y ¿VALE LA PENA? (COSTE-BENEFICIO)
-----------------------------------------------------------------------
-  Por qué tarda más:
-  • EfficientNetB0 tiene muchos más parámetros y capas que la CNN propia.
-    Cada época hace muchas más operaciones (convoluciones, normalización,
-    etc.), sobre todo en la base. Eso implica más tiempo por época.
+Cuando esta bien, el prompt suele empezar con (venv) o similar.
 
-  ¿Mejora realmente la precisión?
-  • En la práctica, con POCOS datos (p. ej. cientos de imágenes propias),
-    Transfer suele dar mejor precisión que entrenar una red desde cero:
-    la base ya sabe extraer bordes, texturas, formas; solo adaptas la
-    cabeza a tus 4 clases. La red desde cero tiene que aprender todo
-    desde cero y con pocos datos se sobreajusta o no converge bien.
-  • Con MUCHOS datos (decenas de miles de imágenes variadas), una red
-    desde cero bien diseñada puede acercarse o superar a Transfer, pero
-    el coste de entrenamiento sigue siendo alto si la red es grande.
+--------------------------------------------------------------------------------
+1.5 Instalar dependencias del proyecto
+--------------------------------------------------------------------------------
 
-  Coste-beneficio (resumen):
-  • Poco dato + tiempo disponible → Transfer suele compensar: más tiempo
-    de entrenamiento, pero mejor precisión y menos riesgo de sobreajuste.
-  • Poco dato + necesitas resultado rápido o sin GPU → CNN desde cero
-    es una opción válida; puede quedar por debajo en precisión pero
-    sirve para aprender y para demos.
-  • Desventaja clara de la red desde cero con pocos datos: menos
-    precisión y más sensibilidad al tamaño y calidad del dataset. La
-    ventaja: mucho más rápida y más fácil de interpretar (menos capas).
+Con el venv ACTIVADO y estando en la raiz del proyecto:
 
+  pip install -r requirements.txt
 
-9. TRANSFER CON RED PROPIA (NO SOLO EFFICIENTNET)
--------------------------------------------------
-  Una variante muy interesante para analizar en clase:
+La primera vez puede tardar varios minutos (descarga TensorFlow, etc.).
 
-  Idea: usar como "modelo preentrenado" no EfficientNet, sino tu propia
-  CNN entrenada en un dataset (A), y luego hacer "transfer" o
-  fine-tuning con otro dataset (B). Así el conocimiento previo es el
-  de tu red, no el de ImageNet.
+Comprueba librerias:
 
-  Dos flujos posibles:
+  python scripts/bibliotecas_versiones.py
 
-  A) Entrenar CNN propia con dataset de repositorio → fine-tune (o
-     reentrenar cabeza) con TUS imágenes.
-     • Ventaja: la base ya aprendió características de rostros/emociones
-       del dataset público; tú adaptas a tu cámara, iluminación, gestos.
-     • Útil cuando el repo tiene mucho dato y tú tienes poco pero
-       quieres que el modelo "se parezca" a tu entorno.
+--------------------------------------------------------------------------------
+1.6 Desactivar el entorno virtual (cuando termines)
+--------------------------------------------------------------------------------
 
-  B) Entrenar CNN propia con TUS imágenes → fine-tune con dataset
-     de repositorio.
-     • Ventaja: la base se adaptó primero a tu dominio (tu cara, tu
-       cámara); luego refinas con más variedad del repo para generalizar
-       mejor.
-     • Útil cuando quieres priorizar tu entorno y luego enriquecer con
-       datos públicos.
+  deactivate
 
-  Por qué NO hacer "transfer" con el mismo modelo sobre las mismas
-  imágenes con que lo entrenaste: sería seguir entrenando sobre datos
-  que el modelo ya vio; el riesgo de sobreajuste es altísimo y no
-  aporta diversidad. El sentido del transfer es llevar conocimiento
-  de un contexto (dataset A) a otro (dataset B).
+No borra nada; solo "sales" del Python del proyecto hasta la proxima vez que
+actives de nuevo.
 
-  Implementación a grandes rasgos:
-  • Guardas el modelo train_cnn_from_scratch entrenado en dataset A (ej. repo):
-    model.save("models/custom_trained_on_repo.keras").
-  • Cargas ese modelo, congelas parte de las capas (p. ej. los bloques
-    convolucionales), y entrenas solo las capas densas (o las últimas
-    capas) con dataset B (tus imágenes). Mismo concepto que EfficientNet:
-    base congelada o con lr bajo, cabeza adaptada al nuevo dato.
-  • Puedes hacer el mismo esquema al revés: entrenar primero en tus
-    imágenes, guardar, luego cargar y fine-tunear con el repo.
+--------------------------------------------------------------------------------
+1.7 Problemas frecuentes (venv)
+--------------------------------------------------------------------------------
 
-  Esto les da a los estudiantes una cuarta variante para comparar:
-  1) Transfer con EfficientNet + tus imágenes.
-  2) Transfer con EfficientNet + repo.
-  3) CNN desde cero + repo, luego "transfer" a tus imágenes (red propia).
-  4) CNN desde cero + tus imágenes, luego "transfer" al repo (red propia).
-  Y analizar cuándo conviene cada una según cantidad de datos y objetivo.
+  - "python no se reconoce": instala Python o usa "py" en Windows.
+  - PowerShell no ejecuta Activate.ps1: abre CMD y usa activate.bat, o cambia
+    la politica de ejecucion (solo si tu profesor/tecnico lo autoriza).
+  - Instalaste paquetes pero "ModuleNotFoundError": casi seguro no activaste
+    el venv antes del pip install; activa venv y vuelve a pip install -r ...
+
+================================================================================
+2) DEPENDENCIAS (resumen)
+================================================================================
+
+Con venv activado, desde la raiz:
+
+  pip install -r requirements.txt
+
+Lista de paquetes: archivo requirements.txt en la raiz del proyecto.
+
+================================================================================
+3) VERIFICACION RAPIDA
+================================================================================
+
+  python scripts/bibliotecas_versiones.py
+  python scripts/data_preprocessing.py
+
+================================================================================
+4) CONFIGURACION DISTRIBUIDA (recordatorio)
+================================================================================
+
+- data_split.py y data_preprocessing.py: misma USE_KAGGLE_FER.
+- training_utils.py: MODEL_CAMINO_1 … MODEL_CAMINO_6.
+- Caminos 5 y 6: MODELO_BASE en el script correspondiente.
+- realtime_emotion_recognition.py: MODELO_REALTIME, INDICE_MODELO, ENTRENADO_CON_FER.
+
+================================================================================
+5) ORDEN DE EJECUCION LOCAL
+================================================================================
+
+  data_split.py -> data_preprocessing.py -> generate_model_path_N.py
+
+data_split borra prepared_data antes de repartir.
+
+================================================================================
+6) GOOGLE COLAB (guia paso a paso)
+================================================================================
+
+Colab es un notebook en la nube con Python ya instalado. Sirve sobre todo para
+ENTRENAR con GPU sin tener buena tarjeta en tu PC. La webcam en tiempo real
+(realtime) en Colab es complicada; lo normal es entrenar en Colab y bajar el
+.keras para probar en tu maquina.
+
+--------------------------------------------------------------------------------
+6.1 Preparar el proyecto para subirlo
+--------------------------------------------------------------------------------
+
+1) En tu PC, comprime en un .zip la carpeta del proyecto (o al menos: scripts,
+   requirements.txt, y si tienes datos, la carpeta data con lo necesario).
+
+2) Sube el .zip a Google Drive (arrastra al navegador en drive.google.com).
+
+--------------------------------------------------------------------------------
+6.2 Abrir Colab y usar GPU
+--------------------------------------------------------------------------------
+
+1) Entra a https://colab.research.google.com y crea "Nuevo cuaderno".
+
+2) Menu: Entorno de ejecucion (Runtime) -> Cambiar tipo de entorno de ejecucion
+   (Change runtime type) -> Acelerador de hardware: GPU (T4 u otra) -> Guardar.
+
+Sin GPU el entrenamiento sera mucho mas lento.
+
+--------------------------------------------------------------------------------
+6.3 Montar Google Drive en Colab
+--------------------------------------------------------------------------------
+
+En una celda del notebook ejecuta:
+
+  from google.colab import drive
+  drive.mount('/content/drive')
+
+Sigue el enlace, da permisos y pega el codigo que te pide. Asi Colab ve tus
+archivos en Drive.
+
+--------------------------------------------------------------------------------
+6.4 Descomprimir el proyecto y ubicarte
+--------------------------------------------------------------------------------
+
+Ajusta RUTA_ZIP a donde subiste el zip (ejemplo dentro de Mi unidad):
+
+  !unzip -q "/content/drive/MyDrive/ruta/a/ReconocimientoEmociones-CNN.zip" -d /content/proyecto
+
+  %cd /content/proyecto/ReconocimientoEmociones-CNN
+
+Comprueba que ves la carpeta scripts:
+
+  !ls scripts
+
+Si la estructura es distinta, usa %cd hasta quedar en la carpeta que contiene
+"scripts" y "requirements.txt".
+
+--------------------------------------------------------------------------------
+6.5 Instalar dependencias en Colab
+--------------------------------------------------------------------------------
+
+En la carpeta raiz del proyecto (donde esta requirements.txt):
+
+  !pip install -r requirements.txt
+
+Puede tardar. Luego:
+
+  !python scripts/bibliotecas_versiones.py
+
+--------------------------------------------------------------------------------
+6.6 Ejecutar los scripts en Colab
+--------------------------------------------------------------------------------
+
+Cada comando en una celda con ! al inicio, siempre con %cd en la raiz del proyecto:
+
+  %cd /content/proyecto/ReconocimientoEmociones-CNN
+
+  !python scripts/data_split.py
+  !python scripts/data_preprocessing.py
+  !python scripts/generate_model_path_1.py
+
+Antes de split/preprocess, sube tus imagenes a Drive y copia la estructura
+esperada (data/images/data_collection o data/kaggle_fer) o sube un zip y
+descomprime en /content/proyecto/.../data/ con la misma estructura que en local.
+
+--------------------------------------------------------------------------------
+6.7 Bajar el modelo entrenado (.keras) a tu PC
+--------------------------------------------------------------------------------
+
+En Colab, los archivos en /content se pierden al cerrar la sesion (salvo Drive).
+
+Opcion A - copiar a Drive desde Colab:
+
+  !cp models/modelo_camino_1.keras "/content/drive/MyDrive/"
+
+Opcion B - en el panel izquierdo de Colab, carpeta models/, clic derecho
+descargar en el archivo .keras.
+
+Asi puedes usar el modelo en tu PC con realtime_emotion_recognition.py.
+
+--------------------------------------------------------------------------------
+6.8 Limitaciones de Colab
+--------------------------------------------------------------------------------
+
+- Tiempo de sesion limitado; entrenamientos muy largos pueden cortarse.
+- No es lo mismo que tener webcam local: realtime en Colab requiere trucos
+  extra; para practica de camara usa tu PC con venv.
+- Rutas: todo debe coincidir (data/, models/) como en el README.
+
+================================================================================
+7) GPU EN TU PC (Windows / local)
+================================================================================
+
+TensorFlow 2.x en Windows suele usar CPU por defecto salvo que configures
+WSL2, drivers especificos o DirectML segun la documentacion actual de Google.
+
+Para la mayoria de alumnos en Windows: entrenar en CPU es valido pero lento;
+Colab con GPU es una alternativa clara para pruebas mas rapidas.
+
+En Linux con NVIDIA + drivers + CUDA correctos, TensorFlow puede usar GPU;
+sigue la guia oficial de instalacion de TensorFlow para tu version.
+
+================================================================================
+8) ENTRENAMIENTO Y REALTIME (recordatorio corto)
+================================================================================
+
+Entrenamiento: scripts/training_utils.py (llamado desde generate_model_path_*.py).
+Realtime local: scripts/realtime_emotion_recognition.py (OpenCV + camara).
+
+================================================================================
+9) GIT Y ARCHIVOS PESADOS
+================================================================================
+
+Los modelos .keras suelen estar en .gitignore (no suben al repositorio).
+El codigo y la documentacion si. Para entregar: zip con codigo + instrucciones,
+o enlace a repo + datos en Drive segun pida el profesor.
 
 ================================================================================
