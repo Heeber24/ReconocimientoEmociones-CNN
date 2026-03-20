@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 """
-Camino 6 — Transfer: base = modelo del camino 1, datos = FER.
+Camino 6 — Transfer: base = modelo del camino 1, datos = dataset base.
 Salida: models/modelo_camino_6.keras
 
 Antes: camino 1 entrenado (modelo_camino_1.keras).

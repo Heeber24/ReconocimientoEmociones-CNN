@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 """
-Camino 3 — CNN desde cero (FER). Guarda en models/modelo_camino_3.keras
+Camino 3 — CNN desde cero (dataset base). Guarda en models/modelo_camino_3.keras
 
 Antes: data_split.py → data_preprocessing.py
 """
@@ -20,7 +20,7 @@ from training_utils import (
 def main():
     print_training_prerequisites_banner(transfer_efficientnet=False)
     ensure_kaggle_flag(True, "Camino 3", USE_KAGGLE_DATABASE)
-    print("Camino 3: CNN FER →", MODEL_CAMINO_3.name)
+    print("Camino 3: CNN dataset base →", MODEL_CAMINO_3.name)
     path, acc = run_cnn_from_scratch_training(MODEL_CAMINO_3)
     if path.exists():
         tag_model_copy(path, "modelo_camino_3", acc)

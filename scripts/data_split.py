@@ -3,7 +3,8 @@
 División del dataset en train / validation / test.
 
 Antes de copiar, elimina por completo la carpeta prepared_data para que no queden
-archivos de corridas anteriores. Luego reparte desde DATA_DIR (kaggle_fer o data_collection según USE_KAGGLE_DATABASE).
+archivos de corridas anteriores. Luego reparte desde DATA_DIR (FER_2013, AffectNet
+o my_images según USE_KAGGLE_DATABASE y KAGGLE_DATASET).
 
 Paso 2 del flujo (después de tener datos; ver README).
 """
@@ -17,12 +18,12 @@ from sklearn.model_selection import train_test_split
 # CONFIGURA AQUÍ
 #
 # Este script solo divide (split) y copia imágenes desde el "origen" hacia
-# data/images/prepared_data/{train,validation,test}/<clase>.
+# data/prepared_data/{train,validation,test}/<clase>.
 #
 # En este proyecto manejamos 3 orígenes:
-# - Opción 1: "propias"    -> data/images/data_collection (OpenCV guarda BGR)
-# - Opción 2: "kaggle_fer" -> data/kaggle_fer             (ya viene en RGB)
-# - Opción 3: "affectnet" -> data/affectnet              (ya viene en RGB)
+# - Opción 1: "propias"  -> data/my_images (OpenCV guarda BGR)
+# - Opción 2: "fer_2013" -> data/FER_2013  (ya viene en RGB)
+# - Opción 3: "affectnet"-> data/AffectNet (ya viene en RGB)
 #
 # IMPORTANTE: para Kaggle (fer/affectnet) el contenido debe estar organizado
 # como carpetas por emoción: angry/, happy/, neutral/, surprise/.
@@ -30,26 +31,26 @@ from sklearn.model_selection import train_test_split
 PROJECT_ROOT = Path(__file__).resolve().parent.parent
 
 # True = dividir desde datasets Kaggle (FER o AffectNet)
-# False = dividir desde datos propios capturados (data/images/data_collection)
+# False = dividir desde datos propios capturados (data/my_images)
 USE_KAGGLE_DATABASE = True
 
 # En Kaggle puedes elegir cuál dataset usar como origen.
-# - "fer"      -> data/kaggle_fer/
-# - "affectnet"-> data/affectnet/
-KAGGLE_DATASET = "fer"
+# - "fer_2013"  -> data/FER_2013/
+# - "affectnet" -> data/AffectNet/
+KAGGLE_DATASET = "fer_2013"
 
 if USE_KAGGLE_DATABASE:
-    if KAGGLE_DATASET.lower() == "fer":
-        DATA_DIR = PROJECT_ROOT / "data" / "kaggle_fer"
+    if KAGGLE_DATASET.lower() == "fer_2013":
+        DATA_DIR = PROJECT_ROOT / "data" / "FER_2013"
     elif KAGGLE_DATASET.lower() == "affectnet":
-        DATA_DIR = PROJECT_ROOT / "data" / "affectnet"
+        DATA_DIR = PROJECT_ROOT / "data" / "AffectNet"
     else:
         print(f"Error: KAGGLE_DATASET inválido: {KAGGLE_DATASET!r}")
-        print("Usa KAGGLE_DATASET = 'fer' o 'affectnet'")
+        print("Usa KAGGLE_DATASET = 'fer_2013' o 'affectnet'")
         sys.exit(1)
 else:
-    DATA_DIR = PROJECT_ROOT / "data" / "images" / "data_collection"
-OUTPUT_DIR = PROJECT_ROOT / "data" / "images" / "prepared_data"
+    DATA_DIR = PROJECT_ROOT / "data" / "my_images"
+OUTPUT_DIR = PROJECT_ROOT / "data" / "prepared_data"
 # =============================================================================
 
 # --- CONFIGURACIÓN ---

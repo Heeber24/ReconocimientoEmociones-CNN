@@ -99,7 +99,7 @@ Las proporciones están fijadas en código: **70 % train**, **15 % validation**,
 Utiliza **OpenCV** para capturar rostros en tiempo real con la **webcam**. Los recortes se redimensionan a **224×224 píxeles en color** (BGR al guardar; en el preprocesado se pasa a RGB para el modelo). Cada imagen se guarda en una **carpeta** según la emoción elegida (`angry`, `happy`, `neutral`, `surprise`). El usuario elige emoción por menú y puede limitar cuántas imágenes captura por sesión. Es el paso opcional cuando trabajas con **datos propios** y no solo con FER.
 
 **`data_split.py`**  
-Organiza las imágenes del origen (`data/images/data_collection`, `data/kaggle_fer` o `data/affectnet`, según `USE_KAGGLE_DATABASE` + `KAGGLE_DATASET`) en tres subconjuntos: **entrenamiento**, **validación** y **prueba**. Crea la estructura bajo `data/images/prepared_data/train`, `validation` y `test`, con subcarpetas por emoción. **Antes de repartir, borra** la carpeta `prepared_data` anterior para no mezclar corridas viejas. Es un paso estándar en flujos de visión por computadora.
+Organiza las imágenes del origen (`data/my_images`, `data/FER_2013` o `data/AffectNet`, según `USE_KAGGLE_DATABASE` + `KAGGLE_DATASET`) en tres subconjuntos: **entrenamiento**, **validación** y **prueba**. Crea la estructura bajo `data/prepared_data/train`, `validation` y `test`, con subcarpetas por emoción. **Antes de repartir, borra** la carpeta `prepared_data` anterior para no mezclar corridas viejas. Es un paso estándar en flujos de visión por computadora.
 
 **`data_preprocessing.py`**  
 Prepara la **lectura** de las imágenes para el entrenamiento: **normalización** (por ejemplo escala 0–1), **augmentation** en entrenamiento (rotaciones, brillo, etc.) y creación de **generadores** de Keras listos para `model.fit`. Al ejecutarlo como script, valida que existan train/validation, muestra conteos y comprueba que los generadores cargan sin error. El entrenamiento en `training_utils.py` **reutiliza** estas mismas funciones.
@@ -108,7 +108,7 @@ Prepara la **lectura** de las imágenes para el entrenamiento: **normalización*
 Aquí está la **lógica pesada** del entrenamiento: construcción de la CNN desde cero, modelo con **EfficientNetB0** e ImageNet, y transfer **desde un modelo ya guardado** (caminos 5 y 6). Incluye **callbacks** (por ejemplo guardar el mejor modelo por `val_loss` o `val_accuracy`, **EarlyStopping**, **ReduceLROnPlateau** según el caso) y al final **evalúa en el conjunto de prueba**. También define las rutas **`modelo_camino_1.keras` … `modelo_camino_6.keras`**. Las carpetas `train/`, `validation/`, `test/` las toma desde `data_preprocessing.py`.
 
 **`generate_model_path_1.py` … `generate_model_path_6.py`**  
-Scripts **cortos** que solo fijan **qué camino** corres (datos propios vs FER, coherente con split/preprocess) y llaman a la función adecuada en `training_utils.py`. Así el flujo pedagógico queda claro: primero datos, luego el número de camino que quieras experimentar.
+Scripts **cortos** que solo fijan **qué camino** corres (datos propios vs dataset base, coherente con split/preprocess) y llaman a la función adecuada en `training_utils.py`. Así el flujo pedagógico queda claro: primero datos, luego el número de camino que quieras experimentar.
 
 **`realtime_emotion_recognition.py`**  
 Script de **reconocimiento en tiempo real**: abre la cámara, detecta rostros (Haar Cascade), recorta la región, la prepara según el tipo de modelo y pasa el tensor por la **red cargada** (`.keras`). Muestra la emoción predicha y un panel con **probabilidades** por clase sobre el video.
@@ -132,11 +132,10 @@ Comprueba imports y versiones de las dependencias principales; úsalo después d
 ReconocimientoEmociones-CNN/
 ├── scripts/
 ├── data/
-│   ├── images/
-│   │   ├── data_collection/
-│   │   └── prepared_data/     (train, validation, test)
-│   └── kaggle_fer/ (FER)
-│   └── affectnet/  (AffectNet)
+│   ├── my_images/             (captura propia)
+│   ├── FER_2013/              (dataset base 1)
+│   ├── AffectNet/             (dataset base 2)
+│   └── prepared_data/         (train, validation, test)
 ├── models/                    (modelo_camino_1.keras … modelo_camino_6.keras)
 ├── requirements.txt
 ├── README.md
@@ -162,10 +161,10 @@ ReconocimientoEmociones-CNN/
 
 1. **Camino 1** — CNN desde cero, **tus** imágenes.  
 2. **Camino 2** — Mismos datos que el 1, **EfficientNetB0** (ImageNet).  
-3. **Camino 3** — CNN desde cero, datos **FER**.  
-4. **Camino 4** — EfficientNet con datos **FER**.  
+3. **Camino 3** — CNN desde cero, dataset base (**FER_2013** o **AffectNet**).  
+4. **Camino 4** — EfficientNet con dataset base (**FER_2013** o **AffectNet**).  
 5. **Camino 5** — Transfer desde el modelo del **3**, entrenando con **tus** fotos.  
-6. **Camino 6** — Transfer desde el modelo del **1**, entrenando con **FER**.
+6. **Camino 6** — Transfer desde el modelo del **1**, entrenando con dataset base.
 
 Cada uno guarda su archivo principal en **`models/modelo_camino_N.keras`** y una copia con fecha y accuracy.
 
@@ -177,7 +176,7 @@ Cada uno guarda su archivo principal en **`models/modelo_camino_N.keras`** y una
 - Nombres de los seis checkpoints: **`training_utils.py`**.  
 - Qué camino corres: cada **`generate_model_path_*.py`**.  
 - Base en 5 y 6: variable **`MODELO_BASE`** en esos scripts.  
-- Cámara: **`realtime_emotion_recognition.py`** (`MODELO_REALTIME`, `INDICE_MODELO`, **`ENTRENADO_CON_FER`**).
+- Cámara: **`realtime_emotion_recognition.py`** (`MODELO_REALTIME`, `INDICE_MODELO`, **`TRAINED_DATA_SOURCE`**).
 
 ---
 
@@ -194,7 +193,7 @@ En código está fijado **EfficientNetB0** (no VGG16). Otro backbone implica edi
 
 ---
 
-## 11. Subir al repositorio (Git), Colab con FER y qué esperar del rendimiento
+## 11. Subir al repositorio (Git), Colab con datasets base y qué esperar del rendimiento
 
 ### 11.1 Antes de hacer `push` al repo
 
@@ -204,34 +203,37 @@ Revisa el archivo **`.gitignore`** en la raíz del proyecto. En esta plantilla s
 - **`*.keras`** y **`*.h5`** — los modelos entrenados pesan mucho; no conviene llenar el repositorio con ellos.
 - **`data/`** — muchas veces se ignora toda la carpeta para no subir miles de imágenes ni datos personales.
 
-Eso implica: el que clone el repo tendrá el **código y la documentación**, pero tendrá que **colocar sus propias imágenes** (en `data/images/data_collection` o `data/kaggle_fer` según el caso) y volver a entrenar. Si tu profesor pide entregar también datos o un modelo, usa **Drive**, **releases** o un zip aparte según las reglas de la asignatura.
+Eso implica: el que clone el repo tendrá el **código y la documentación**, pero tendrá que **colocar sus propias imágenes** (en `data/my_images`) o un dataset base (en `data/FER_2013` o `data/AffectNet`) y volver a entrenar. Si tu profesor pide entregar también datos o un modelo, usa **Drive**, **releases** o un zip aparte según las reglas de la asignatura.
 
-### 11.2 Probar en Google Colab con datos FER
+### 11.2 Probar en Google Colab con FER_2013 o AffectNet
 
-Objetivo típico: entrenar con **FER** (muchas imágenes, a veces con **GPU** en Colab) y comparar con lo que obtuviste con **tus fotos** en local.
+Objetivo típico: entrenar con un **dataset base** (FER_2013 o AffectNet, con muchas imágenes y opcionalmente **GPU** en Colab) y comparar con lo que obtuviste con **tus fotos** en local.
 
-Enlace FER listo para clase (cuatro emociones):  
+Enlace FER_2013 listo para clase (cuatro emociones):  
 <https://drive.google.com/drive/folders/1KskRFbO7H2qRqh3A0vtUXe-loXfivuQy?usp=sharing>
+
+Enlace AffectNet listo para clase (cuatro emociones):  
+<https://drive.google.com/drive/folders/1U03VkNE9UVSIe2YlgdwhZ39utDarJoj9?usp=sharing>
 
 Pasos alineados con este proyecto:
 
 1. Sube el proyecto a tu repo y/o empaqueta un **zip** con al menos `scripts/`, `requirements.txt`, `README.md`, `NOTAS_TECNICAS.txt` (y sin `venv` ni modelos gigantes si no quieres).
 2. En **Google Drive**, deja el dataset en la ruta que espera el código:
-   - FER: **`data/kaggle_fer/`**
-   - AffectNet: **`data/affectnet/`**
+   - FER_2013: **`data/FER_2013/`**
+   - AffectNet: **`data/AffectNet/`**
    Con **subcarpetas por emoción** y los mismos nombres que usa el proyecto (`angry`, `happy`, `neutral`, `surprise`).
 3. En Colab: monta Drive, descomprime o clona el proyecto, `cd` a la raíz (donde está `requirements.txt`). Guía detallada celda por celda: **`NOTAS_TECNICAS.txt`**, sección **6**.
 4. En **`data_split.py`** y **`data_preprocessing.py`** pon **`USE_KAGGLE_DATABASE = True`**.
-   Si es AffectNet, además pon **`KAGGLE_DATASET = "affectnet"`** en `data_split.py`.
+   Si es FER_2013 pon **`KAGGLE_DATASET = "fer_2013"`** y si es AffectNet pon **`KAGGLE_DATASET = "affectnet"`** en `data_split.py`.
 5. Ejecuta **`data_split.py`** y **`data_preprocessing.py`**.
 6. Entrena **camino 3** (CNN + Kaggle) o **camino 4** (EfficientNet + Kaggle); en ese `generate_model_path_*.py` debe ir la **misma** `USE_KAGGLE_DATABASE = True`.
-7. Copia **`modelo_camino_3.keras`** o **`modelo_camino_4.keras`** a Drive o **descárgalo** a tu PC para probarlo con **`realtime_emotion_recognition.py`** (y ajusta **`ENTRENADO_CON_FER`** acorde al modelo).
+7. Copia **`modelo_camino_3.keras`** o **`modelo_camino_4.keras`** a Drive o **descárgalo** a tu PC para probarlo con **`realtime_emotion_recognition.py`** (y ajusta **`TRAINED_DATA_SOURCE`** acorde al modelo).
 
 ### 11.3 ¿Va a salir “tan bueno” como con tus imágenes?
 
-**No está garantizado** que el número de precisión en test sea mayor o menor: **FER y tus fotos no son el mismo mundo**.
+**No está garantizado** que el número de precisión en test sea mayor o menor: **dataset base y tus fotos no son el mismo mundo**.
 
-- FER tiene otro tipo de rostros, resolución, iluminación y recorte que lo que capturas tú con la webcam.
+- FER_2013/AffectNet pueden tener otro tipo de rostros, resolución, iluminación y recorte que lo que capturas tú con la webcam.
 - Un modelo puede ir **muy bien** en el test de FER y **regular** contigo en vivo, o al revés.
 - Por eso el proyecto tiene **varios caminos** (1 frente a 3, 2 frente a 4, y los transfer 5 y 6): para **comparar** estrategias y dominios, no solo un único “mejor modelo universal”.
 

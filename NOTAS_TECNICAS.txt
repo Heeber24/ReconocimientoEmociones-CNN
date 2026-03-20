@@ -150,7 +150,7 @@ Lista de paquetes: archivo requirements.txt en la raiz del proyecto.
 - data_split.py y data_preprocessing.py: misma USE_KAGGLE_DATABASE.
 - training_utils.py: MODEL_CAMINO_1 … MODEL_CAMINO_6.
 - Caminos 5 y 6: MODELO_BASE en el script correspondiente.
-- realtime_emotion_recognition.py: MODELO_REALTIME, INDICE_MODELO, ENTRENADO_CON_FER.
+- realtime_emotion_recognition.py: MODELO_REALTIME, INDICE_MODELO, TRAINED_DATA_SOURCE.
 
 ================================================================================
 5) ORDEN DE EJECUCION LOCAL
@@ -243,7 +243,7 @@ Cada comando en una celda con ! al inicio, siempre con %cd en la raiz del proyec
   !python scripts/generate_model_path_1.py
 
 Antes de split/preprocess, sube tus imagenes a Drive y copia la estructura
-esperada (data/images/data_collection o data/kaggle_fer) o sube un zip y
+esperada (data/my_images, data/FER_2013 o data/AffectNet) o sube un zip y
 descomprime en /content/proyecto/.../data/ con la misma estructura que en local.
 
 --------------------------------------------------------------------------------
@@ -284,11 +284,14 @@ En clase (modalidad recomendada): el profesor puede compartir un ENLACE a una
 carpeta o zip en Drive con el FER ya listo (solo esas cuatro emociones, sin
 tener que registrarse en Kaggle ni buscar el dataset ni filtrar clases). Los
 alumnos agregan esa carpeta a su Drive ("Agregar acceso directo" o descargan y
-suben a su unidad) y en Colab montan su Drive y copian a data/kaggle_fer/ como
+suben a su unidad) y en Colab montan su Drive y copian a data/FER_2013/ como
 en el paso 5. Asi el flujo queda sencillo: enlace -> su Drive -> proyecto en Colab.
 
-Enlace compartido para clase (kaggle_fer, 4 emociones):
+Enlace compartido para clase (FER_2013, 4 emociones):
 https://drive.google.com/drive/folders/1KskRFbO7H2qRqh3A0vtUXe-loXfivuQy?usp=sharing
+
+Enlace compartido para clase (AffectNet, 4 emociones):
+https://drive.google.com/drive/folders/1U03VkNE9UVSIe2YlgdwhZ39utDarJoj9?usp=sharing
 
 1) Crear cuaderno en Colab y activar GPU (ver 6.2).
 
@@ -313,31 +316,33 @@ https://drive.google.com/drive/folders/1KskRFbO7H2qRqh3A0vtUXe-loXfivuQy?usp=sha
      from google.colab import drive
      drive.mount('/content/drive')
 
-5) Llevar el FER a la ruta que espera el proyecto: data/kaggle_fer/ con
+5) Llevar el dataset a la ruta que espera el proyecto:
+   - FER_2013: data/FER_2013/
+   - AffectNet: data/AffectNet/
    subcarpetas por emocion y los mismos nombres que en el codigo:
 
-     data/kaggle_fer/angry/
-     data/kaggle_fer/happy/
-     data/kaggle_fer/neutral/
-     data/kaggle_fer/surprise/
+     data/FER_2013/angry/
+     data/FER_2013/happy/
+     data/FER_2013/neutral/
+     data/FER_2013/surprise/
 
    Si en Drive tu carpeta ya tiene esas cuatro carpetas (solo esas emociones),
    copialas desde la ruta real en Mi unidad. Ejemplo (CAMBIA la ruta de Drive):
 
-     !mkdir -p data/kaggle_fer
-     !cp -r "/content/drive/MyDrive/ruta/a/tu_FER/angry" data/kaggle_fer/
-     !cp -r "/content/drive/MyDrive/ruta/a/tu_FER/happy" data/kaggle_fer/
-     !cp -r "/content/drive/MyDrive/ruta/a/tu_FER/neutral" data/kaggle_fer/
-     !cp -r "/content/drive/MyDrive/ruta/a/tu_FER/surprise" data/kaggle_fer/
+     !mkdir -p data/FER_2013
+     !cp -r "/content/drive/MyDrive/ruta/a/tu_FER/angry" data/FER_2013/
+     !cp -r "/content/drive/MyDrive/ruta/a/tu_FER/happy" data/FER_2013/
+     !cp -r "/content/drive/MyDrive/ruta/a/tu_FER/neutral" data/FER_2013/
+     !cp -r "/content/drive/MyDrive/ruta/a/tu_FER/surprise" data/FER_2013/
 
    Si subiste un .zip con esas cuatro carpetas, descomprime de modo que quede
-   la misma estructura bajo data/kaggle_fer/.
+   la misma estructura bajo data/FER_2013/.
 
    Nota: esto NO usa la API de Kaggle en el cuaderno si el dataset ya esta en
    Drive; solo copia o descomprime. Si en cambio bajas con "kaggle datasets
-   download", igual debes terminar con la misma estructura bajo data/kaggle_fer/.
+   download", igual debes terminar con la misma estructura bajo data/FER_2013/.
 
-6) Pasos siguientes (FER en codigo):
+6) Pasos siguientes (dataset base en codigo):
 
    - En scripts/data_split.py y scripts/data_preprocessing.py: USE_KAGGLE_DATABASE = True
    - Ejecutar: data_split.py -> data_preprocessing.py (ver 6.6)
@@ -345,7 +350,7 @@ https://drive.google.com/drive/folders/1KskRFbO7H2qRqh3A0vtUXe-loXfivuQy?usp=sha
    - Entrenar y luego bajar el .keras (6.7).
 
 Si prefieres subir el proyecto como .zip desde la PC en lugar de git clone,
-sigue 6.1 y 6.4; el destino data/kaggle_fer/ y el resto del flujo es el mismo.
+sigue 6.1 y 6.4; el destino (data/FER_2013 o data/AffectNet) y el resto del flujo es el mismo.
 
 ================================================================================
 7) GPU EN TU PC (Windows / local)

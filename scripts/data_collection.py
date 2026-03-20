@@ -15,7 +15,7 @@ import time
 # CONFIGURA AQUÍ — solo captura para datos propios (carpeta destino)
 # =============================================================================
 PROJECT_ROOT = Path(__file__).resolve().parent.parent
-DATA_PATH = PROJECT_ROOT / "data" / "images" / "data_collection"
+DATA_PATH = PROJECT_ROOT / "data" / "my_images"
 EMOTION_LIST = ["angry", "happy", "neutral", "surprise"]
 FACE_SIZE = (224, 224)
 # =============================================================================

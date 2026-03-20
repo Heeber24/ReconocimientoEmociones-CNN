@@ -24,10 +24,29 @@ MODELS_DIR = PROJECT_ROOT / "models"
 EMOTION_LIST = ["angry", "happy", "neutral", "surprise"]
 FACE_SIZE = (224, 224)
 
-# Coherente con el entrenamiento: True si el modelo vio principalmente FER (ROI gris).
-ENTRENADO_CON_FER = True
-USE_GRAY_ROI = ENTRENADO_CON_FER
-IMAGES_ARE_BGR = not ENTRENADO_CON_FER
+# Fuente usada para entrenar el modelo actual:
+# - "my_images": datos propios capturados con OpenCV (guardados en BGR)
+# - "fer_2013": FER_2013 (Kaggle)
+# - "affectnet": AffectNet (Kaggle)
+TRAINED_DATA_SOURCE = "fer_2013"  # Aqui se cambia el origen de los datos "fer_2013", "affectnet" o "my_images"
+
+# El usuario solo cambia TRAINED_DATA_SOURCE y el script deduce el preprocesado.
+if TRAINED_DATA_SOURCE == "fer_2013":
+    # FER_2013: ROI en gris (luego se convierte a RGB para el modelo).
+    USE_GRAY_ROI = True
+    IMAGES_ARE_BGR = False
+elif TRAINED_DATA_SOURCE == "affectnet":
+    # AffectNet: ROI en color (flujo RGB).
+    USE_GRAY_ROI = False
+    IMAGES_ARE_BGR = False
+elif TRAINED_DATA_SOURCE == "my_images":
+    # my_images: ROI en color capturado con OpenCV (BGR).
+    USE_GRAY_ROI = False
+    IMAGES_ARE_BGR = True
+else:
+    raise ValueError(
+        "TRAINED_DATA_SOURCE inválido. Usa: 'fer_2013', 'affectnet' o 'my_images'."
+    )
 
 # Ruta al .keras (relativa al proyecto o absoluta). Si vacío, usa lista por índice.
 # Vacío = usa INDICE_MODELO con CANDIDATOS_EN_MODELS. O pon ruta fija, ej. "models/modelo_camino_2.keras"
@@ -249,7 +268,7 @@ while cap.isOpened():
         if USE_GRAY_ROI:
             roi = gray[y : y + h, x : x + w]
             roi = cv2.resize(roi, FACE_SIZE, interpolation=cv2.INTER_CUBIC)
-            # Kaggle/FER usa `color_mode="rgb"` en el preprocesado del training,
+            # FER_2013 usa `color_mode="rgb"` en el preprocesado del training,
             # así que el ROI gris debe convertirse a RGB para que coincida.
             roi = cv2.cvtColor(roi, cv2.COLOR_GRAY2RGB)
         else:

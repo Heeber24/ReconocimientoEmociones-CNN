@@ -35,8 +35,8 @@ sys.path.insert(0, str(Path(__file__).resolve().parent))
 #
 # Carpeta: models/  |  Cada generate_model_path_N guarda en modelo_camino_N.keras
 #
-# Camino 5: transfer con datos propios → base típica = MODEL_CAMINO_3 (CNN FER).
-# Camino 6: transfer con FER → base típica = MODEL_CAMINO_1 (CNN propias).
+# Camino 5: transfer con datos propios → base típica = MODEL_CAMINO_3 (CNN dataset base).
+# Camino 6: transfer con dataset base → base típica = MODEL_CAMINO_1 (CNN propias).
 #
 # Las rutas de datos (train/val/test) vienen de data_preprocessing (split/preprocess).
 # =============================================================================
