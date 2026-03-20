@@ -270,6 +270,83 @@ Asi puedes usar el modelo en tu PC con realtime_emotion_recognition.py.
   extra; para practica de camara usa tu PC con venv.
 - Rutas: todo debe coincidir (data/, models/) como en el README.
 
+--------------------------------------------------------------------------------
+6.9 Procedimiento ejemplo: modelo con FER (cuatro emociones) desde Drive
+--------------------------------------------------------------------------------
+
+Orden recomendado para un taller en Colab cuando los datos FER ya estan en
+Google Drive (por ejemplo subiste una carpeta FER donde SOLO estan las cuatro
+emociones que usa este proyecto: angry, happy, neutral, surprise). No hace falta
+tener las siete clases del FER completo si el codigo esta pensado para estas
+cuatro.
+
+En clase (modalidad recomendada): el profesor puede compartir un ENLACE a una
+carpeta o zip en Drive con el FER ya listo (solo esas cuatro emociones, sin
+tener que registrarse en Kaggle ni buscar el dataset ni filtrar clases). Los
+alumnos agregan esa carpeta a su Drive ("Agregar acceso directo" o descargan y
+suben a su unidad) y en Colab montan su Drive y copian a data/kaggle_fer/ como
+en el paso 5. Asi el flujo queda sencillo: enlace -> su Drive -> proyecto en Colab.
+
+Enlace compartido para clase (kaggle_fer, 4 emociones):
+https://drive.google.com/drive/folders/1KskRFbO7H2qRqh3A0vtUXe-loXfivuQy?usp=sharing
+
+1) Crear cuaderno en Colab y activar GPU (ver 6.2).
+
+2) Clonar el repositorio desde GitHub (una sola vez por sesion; ajusta la URL
+   si usas otro fork):
+
+     %cd /content
+     !git clone https://github.com/Heeber24/ReconocimientoEmociones-CNN.git
+     %cd /content/ReconocimientoEmociones-CNN
+
+   Comprueba que ves scripts, requirements.txt y README:
+
+     !ls -la
+
+3) Instalar dependencias y comprobar que las versiones pedidas cargan:
+
+     !pip install -r requirements.txt
+     !python scripts/bibliotecas_versiones.py
+
+4) Montar Google Drive (ver 6.3):
+
+     from google.colab import drive
+     drive.mount('/content/drive')
+
+5) Llevar el FER a la ruta que espera el proyecto: data/kaggle_fer/ con
+   subcarpetas por emocion y los mismos nombres que en el codigo:
+
+     data/kaggle_fer/angry/
+     data/kaggle_fer/happy/
+     data/kaggle_fer/neutral/
+     data/kaggle_fer/surprise/
+
+   Si en Drive tu carpeta ya tiene esas cuatro carpetas (solo esas emociones),
+   copialas desde la ruta real en Mi unidad. Ejemplo (CAMBIA la ruta de Drive):
+
+     !mkdir -p data/kaggle_fer
+     !cp -r "/content/drive/MyDrive/ruta/a/tu_FER/angry" data/kaggle_fer/
+     !cp -r "/content/drive/MyDrive/ruta/a/tu_FER/happy" data/kaggle_fer/
+     !cp -r "/content/drive/MyDrive/ruta/a/tu_FER/neutral" data/kaggle_fer/
+     !cp -r "/content/drive/MyDrive/ruta/a/tu_FER/surprise" data/kaggle_fer/
+
+   Si subiste un .zip con esas cuatro carpetas, descomprime de modo que quede
+   la misma estructura bajo data/kaggle_fer/.
+
+   Nota: esto NO usa la API de Kaggle en el cuaderno si el dataset ya esta en
+   Drive; solo copia o descomprime. Si en cambio bajas con "kaggle datasets
+   download", igual debes terminar con la misma estructura bajo data/kaggle_fer/.
+
+6) Pasos siguientes (FER en codigo):
+
+   - En scripts/data_split.py y scripts/data_preprocessing.py: USE_KAGGLE_FER = True
+   - Ejecutar: data_split.py -> data_preprocessing.py (ver 6.6)
+   - En el generate_model_path_3.py o generate_model_path_4.py: misma USE_KAGGLE_FER = True
+   - Entrenar y luego bajar el .keras (6.7).
+
+Si prefieres subir el proyecto como .zip desde la PC en lugar de git clone,
+sigue 6.1 y 6.4; el destino data/kaggle_fer/ y el resto del flujo es el mismo.
+
 ================================================================================
 7) GPU EN TU PC (Windows / local)
 ================================================================================

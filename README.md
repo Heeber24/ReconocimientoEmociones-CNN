@@ -209,6 +209,9 @@ Eso implica: el que clone el repo tendrá el **código y la documentación**, pe
 
 Objetivo típico: entrenar con **FER** (muchas imágenes, a veces con **GPU** en Colab) y comparar con lo que obtuviste con **tus fotos** en local.
 
+Enlace FER listo para clase (cuatro emociones):  
+<https://drive.google.com/drive/folders/1KskRFbO7H2qRqh3A0vtUXe-loXfivuQy?usp=sharing>
+
 Pasos alineados con este proyecto:
 
 1. Sube el proyecto a tu repo y/o empaqueta un **zip** con al menos `scripts/`, `requirements.txt`, `README.md`, `NOTAS_TECNICAS.txt` (y sin `venv` ni modelos gigantes si no quieres).
