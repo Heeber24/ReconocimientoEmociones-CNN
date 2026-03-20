@@ -25,13 +25,13 @@ EMOTION_LIST = ["angry", "happy", "neutral", "surprise"]
 FACE_SIZE = (224, 224)
 
 # Coherente con el entrenamiento: True si el modelo vio principalmente FER (ROI gris).
-ENTRENADO_CON_FER = False
+ENTRENADO_CON_FER = True
 USE_GRAY_ROI = ENTRENADO_CON_FER
 IMAGES_ARE_BGR = not ENTRENADO_CON_FER
 
 # Ruta al .keras (relativa al proyecto o absoluta). Si vacío, usa lista por índice.
 # Vacío = usa INDICE_MODELO con CANDIDATOS_EN_MODELS. O pon ruta fija, ej. "models/modelo_camino_2.keras"
-MODELO_REALTIME = "models/modelo_camino_2.keras"
+MODELO_REALTIME = "models/modelo_camino_4.keras"
 # Si MODELO_REALTIME está vacío y no pasas --model-path, elige por índice:
 CANDIDATOS_EN_MODELS = [
     "modelo_camino_1.keras",
@@ -249,7 +249,9 @@ while cap.isOpened():
         if USE_GRAY_ROI:
             roi = gray[y : y + h, x : x + w]
             roi = cv2.resize(roi, FACE_SIZE, interpolation=cv2.INTER_CUBIC)
-            roi = cv2.cvtColor(roi, cv2.COLOR_GRAY2BGR)
+            # Kaggle/FER usa `color_mode="rgb"` en el preprocesado del training,
+            # así que el ROI gris debe convertirse a RGB para que coincida.
+            roi = cv2.cvtColor(roi, cv2.COLOR_GRAY2RGB)
         else:
             roi = frame[y : y + h, x : x + w]
             roi = cv2.resize(roi, FACE_SIZE, interpolation=cv2.INTER_CUBIC)
