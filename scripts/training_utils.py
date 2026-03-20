@@ -78,12 +78,12 @@ def print_training_prerequisites_banner(*, transfer_efficientnet: bool = False) 
     print("=" * 70 + "\n")
 
 
-def ensure_kaggle_flag(expected: bool, label: str, use_kaggle_fer: bool) -> None:
-    """Comprueba que la bandera del script de camino coincide con la fase (FER vs propias)."""
-    if use_kaggle_fer != expected:
-        print(f"[{label}] Inconsistencia de USE_KAGGLE_FER.")
-        print(f"  - Este paso espera: USE_KAGGLE_FER = {expected}")
-        print(f"  - Tienes en este script: {use_kaggle_fer}")
+def ensure_kaggle_flag(expected: bool, label: str, use_kaggle_database: bool) -> None:
+    """Comprueba que la bandera del script de camino coincide con la fase (Kaggle vs propias)."""
+    if use_kaggle_database != expected:
+        print(f"[{label}] Inconsistencia de USE_KAGGLE_DATABASE.")
+        print(f"  - Este paso espera: USE_KAGGLE_DATABASE = {expected}")
+        print(f"  - Tienes en este script: {use_kaggle_database}")
         print("  Alinea data_split.py, data_preprocessing.py y el generate_model_path_*.py.")
         sys.exit(1)
 

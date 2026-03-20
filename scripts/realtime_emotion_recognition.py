@@ -10,8 +10,9 @@ from pathlib import Path
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 import cv2
 import numpy as np
-from keras.models import load_model  # type: ignore
+from tensorflow.keras.models import load_model  # type: ignore
 from tensorflow.keras import Sequential  # type: ignore
+from tensorflow.keras.layers import Dense as TFDense  # type: ignore
 
 from training_utils import efficientnet_preprocess_fn  # noqa: E402
 
@@ -30,7 +31,7 @@ IMAGES_ARE_BGR = not ENTRENADO_CON_FER
 
 # Ruta al .keras (relativa al proyecto o absoluta). Si vacío, usa lista por índice.
 # Vacío = usa INDICE_MODELO con CANDIDATOS_EN_MODELS. O pon ruta fija, ej. "models/modelo_camino_2.keras"
-MODELO_REALTIME = ""
+MODELO_REALTIME = "models/modelo_camino_2.keras"
 # Si MODELO_REALTIME está vacío y no pasas --model-path, elige por índice:
 CANDIDATOS_EN_MODELS = [
     "modelo_camino_1.keras",
@@ -77,6 +78,20 @@ PREDICTION_UPDATE_EVERY_N_FRAMES = 3
 BLUR_BACKGROUND = True
 
 
+class DenseIgnoreQuantizationConfig(TFDense):
+    """
+    Compatibilidad al cargar modelos .keras guardados con Keras mas nueva.
+
+    En algunos entornos (por ejemplo Python 3.10 / Keras 3.10-3.12),
+    `Dense` no acepta el keyword `quantization_config` que aparece dentro
+    del config serializado del modelo. Si lo ignoramos, `load_model` puede
+    terminar y los pesos se cargan normalmente.
+    """
+
+    def __init__(self, *args, quantization_config=None, **kwargs):
+        super().__init__(*args, **kwargs)
+
+
 def _resolve_model_path() -> Path:
     if cli.model_path:
         p = Path(cli.model_path)
@@ -108,7 +123,17 @@ except Exception:
     model = load_model(
         str(model_path),
         safe_mode=False,
-        custom_objects={"preprocess_fn": efficientnet_preprocess_fn},
+        # Keras guarda el nombre real de la función dentro de la capa Lambda
+        # (en este proyecto: `efficientnet_preprocess_fn`), así que la clave
+        # de `custom_objects` debe coincidir con ese nombre.
+        custom_objects={
+            "efficientnet_preprocess_fn": efficientnet_preprocess_fn,
+            # Compatibilidad por si alguna versión guardó con otro alias.
+            "preprocess_fn": efficientnet_preprocess_fn,
+                # Compatibilidad para modelos con config que incluye
+                # `quantization_config` en Dense.
+                "Dense": DenseIgnoreQuantizationConfig,
+        },
     )
 
 legacy_preprocess = False

@@ -21,16 +21,31 @@ sys.path.insert(0, str(Path(__file__).resolve().parent))
 from tensorflow.keras.preprocessing.image import ImageDataGenerator  # type: ignore
 
 # =============================================================================
-# CONFIGURA AQUÍ — misma USE_KAGGLE_FER que data_split.py y el camino que corras
+# CONFIGURA AQUÍ
+#
+# Para este proyecto:
+# - Si usas datos "propias" (OpenCV webcam) -> USE_KAGGLE_DATABASE=False -> BGR en disco
+# - Si usas datos Kaggle (FER/AffectNet)  -> USE_KAGGLE_DATABASE=True  -> ya vienen en RGB
+#
+# Nota: el nombre del dataset Kaggle (FER vs AffectNet) no cambia el preprocesado
+# aquí, porque en ambos casos esperamos imágenes listas para RGB.
 # =============================================================================
 PROJECT_ROOT = Path(__file__).resolve().parent.parent
-USE_KAGGLE_FER = False
+
+# True = preprocesar datasets Kaggle (FER o AffectNet)
+# False = preprocesar datos propios capturados (data/images/data_collection)
+USE_KAGGLE_DATABASE = True
+
+# Solo informativo (si quieres entrenar con AffectNet, pon USE_KAGGLE_DATABASE=True
+# igual; el origen ya lo eliges en data_split.py con KAGGLE_DATASET).
+KAGGLE_DATASET = "fer"  # "fer" o "affectnet"
+
 PREPARED_DATA = PROJECT_ROOT / "data" / "images" / "prepared_data"
 DATA_ROOT = PREPARED_DATA
 TRAIN_DIR = DATA_ROOT / "train"
 VALIDATION_DIR = DATA_ROOT / "validation"
 TEST_DIR = DATA_ROOT / "test"
-IMAGES_ARE_BGR = not USE_KAGGLE_FER  # OpenCV guarda BGR en captura propia; FER no
+IMAGES_ARE_BGR = not USE_KAGGLE_DATABASE  # BGR en propias; Kaggle (FER/AffectNet) ya en RGB
 # =============================================================================
 
 # Parámetros de imagen usados en todo el proyecto (captura, transfer ImageNet, CNN desde cero)

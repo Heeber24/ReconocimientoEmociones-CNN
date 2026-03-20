@@ -5,7 +5,7 @@ Camino 3 — CNN desde cero (FER). Guarda en models/modelo_camino_3.keras
 Antes: data_split.py → data_preprocessing.py
 """
 # ========== CONFIGURA (igual que data_split.py y data_preprocessing.py) ==========
-USE_KAGGLE_FER = True
+USE_KAGGLE_DATABASE = True
 # =================================================================================
 
 from training_utils import (
@@ -19,7 +19,7 @@ from training_utils import (
 
 def main():
     print_training_prerequisites_banner(transfer_efficientnet=False)
-    ensure_kaggle_flag(True, "Camino 3", USE_KAGGLE_FER)
+    ensure_kaggle_flag(True, "Camino 3", USE_KAGGLE_DATABASE)
     print("Camino 3: CNN FER →", MODEL_CAMINO_3.name)
     path, acc = run_cnn_from_scratch_training(MODEL_CAMINO_3)
     if path.exists():

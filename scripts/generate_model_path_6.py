@@ -4,13 +4,13 @@ Camino 6 — Transfer: base = modelo del camino 1, datos = FER.
 Salida: models/modelo_camino_6.keras
 
 Antes: camino 1 entrenado (modelo_camino_1.keras).
-       USE_KAGGLE_FER = True en split/preprocess, split → preprocessing.
+       USE_KAGGLE_DATABASE = True en split/preprocess, split → preprocessing.
 """
 import sys
 from pathlib import Path
 
 # ========== CONFIGURA ==========
-USE_KAGGLE_FER = True
+USE_KAGGLE_DATABASE = True
 # ===============================
 
 from training_utils import (  # noqa: E402
@@ -28,7 +28,7 @@ MODELO_BASE = MODEL_CAMINO_1
 
 def main():
     print_training_prerequisites_banner(transfer_efficientnet=False)
-    ensure_kaggle_flag(True, "Camino 6", USE_KAGGLE_FER)
+    ensure_kaggle_flag(True, "Camino 6", USE_KAGGLE_DATABASE)
 
     base = Path(MODELO_BASE)
     if not base.is_file():

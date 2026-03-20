@@ -147,7 +147,7 @@ Lista de paquetes: archivo requirements.txt en la raiz del proyecto.
 4) CONFIGURACION DISTRIBUIDA (recordatorio)
 ================================================================================
 
-- data_split.py y data_preprocessing.py: misma USE_KAGGLE_FER.
+- data_split.py y data_preprocessing.py: misma USE_KAGGLE_DATABASE.
 - training_utils.py: MODEL_CAMINO_1 … MODEL_CAMINO_6.
 - Caminos 5 y 6: MODELO_BASE en el script correspondiente.
 - realtime_emotion_recognition.py: MODELO_REALTIME, INDICE_MODELO, ENTRENADO_CON_FER.
@@ -339,9 +339,9 @@ https://drive.google.com/drive/folders/1KskRFbO7H2qRqh3A0vtUXe-loXfivuQy?usp=sha
 
 6) Pasos siguientes (FER en codigo):
 
-   - En scripts/data_split.py y scripts/data_preprocessing.py: USE_KAGGLE_FER = True
+   - En scripts/data_split.py y scripts/data_preprocessing.py: USE_KAGGLE_DATABASE = True
    - Ejecutar: data_split.py -> data_preprocessing.py (ver 6.6)
-   - En el generate_model_path_3.py o generate_model_path_4.py: misma USE_KAGGLE_FER = True
+   - En el generate_model_path_3.py o generate_model_path_4.py: misma USE_KAGGLE_DATABASE = True
    - Entrenar y luego bajar el .keras (6.7).
 
 Si prefieres subir el proyecto como .zip desde la PC en lugar de git clone,

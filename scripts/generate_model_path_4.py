@@ -5,7 +5,7 @@ Camino 4 — Transfer EfficientNetB0 (FER). Guarda en models/modelo_camino_4.ker
 Antes: data_split.py → data_preprocessing.py
 """
 # ========== CONFIGURA (igual que data_split.py y data_preprocessing.py) ==========
-USE_KAGGLE_FER = True
+USE_KAGGLE_DATABASE = True
 # =================================================================================
 
 from training_utils import (
@@ -19,7 +19,7 @@ from training_utils import (
 
 def main():
     print_training_prerequisites_banner(transfer_efficientnet=True)
-    ensure_kaggle_flag(True, "Camino 4", USE_KAGGLE_FER)
+    ensure_kaggle_flag(True, "Camino 4", USE_KAGGLE_DATABASE)
     print("Camino 4: EfficientNet FER →", MODEL_CAMINO_4.name)
     path, acc = run_transfer_efficientnet_training(MODEL_CAMINO_4)
     if path.exists():

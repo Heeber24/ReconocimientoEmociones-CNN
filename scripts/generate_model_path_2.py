@@ -5,7 +5,7 @@ Camino 2 — Transfer EfficientNetB0 (tus fotos). Guarda en models/modelo_camino
 Antes: data_split.py → data_preprocessing.py
 """
 # ========== CONFIGURA (igual que data_split.py y data_preprocessing.py) ==========
-USE_KAGGLE_FER = False
+USE_KAGGLE_DATABASE = False
 # =================================================================================
 
 from training_utils import (
@@ -19,7 +19,7 @@ from training_utils import (
 
 def main():
     print_training_prerequisites_banner(transfer_efficientnet=True)
-    ensure_kaggle_flag(False, "Camino 2", USE_KAGGLE_FER)
+    ensure_kaggle_flag(False, "Camino 2", USE_KAGGLE_DATABASE)
     print("Camino 2: EfficientNet →", MODEL_CAMINO_2.name)
     path, acc = run_transfer_efficientnet_training(MODEL_CAMINO_2)
     if path.exists():
