@@ -4,17 +4,28 @@ Reconocimiento de emociones en tiempo real con la cámara.
 CNN desde cero o transfer EfficientNetB0: configura rutas abajo o usa --model-path.
 """
 import argparse
+import re
 import sys
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
+import quiet_console
+
+quiet_console.init()
+
 import cv2
 import numpy as np
+
+quiet_console.silence_opencv()
+
 from tensorflow.keras.models import load_model  # type: ignore
 from tensorflow.keras import Sequential  # type: ignore
 from tensorflow.keras.layers import Dense as TFDense  # type: ignore
 
 from training_utils import efficientnet_preprocess_fn  # noqa: E402
+from project_config import DATA_SOURCE  # noqa: E402
+
+quiet_console.silence_tensorflow_post_import()
 
 # =============================================================================
 # CONFIGURA AQUÍ
@@ -28,7 +39,7 @@ FACE_SIZE = (224, 224)
 # - "my_images": datos propios capturados con OpenCV (guardados en BGR)
 # - "fer_2013": FER_2013 (Kaggle)
 # - "affectnet": AffectNet (Kaggle)
-TRAINED_DATA_SOURCE = "fer_2013"  # Aqui se cambia el origen de los datos "fer_2013", "affectnet" o "my_images"
+TRAINED_DATA_SOURCE = DATA_SOURCE  # "fer_2013", "affectnet" o "my_images"
 
 # El usuario solo cambia TRAINED_DATA_SOURCE y el script deduce el preprocesado.
 if TRAINED_DATA_SOURCE == "fer_2013":
@@ -51,6 +62,9 @@ else:
 # Ruta al .keras (relativa al proyecto o absoluta). Si vacío, usa lista por índice.
 # Vacío = usa INDICE_MODELO con CANDIDATOS_EN_MODELS. O pon ruta fija, ej. "models/modelo_camino_2.keras"
 MODELO_REALTIME = "models/modelo_camino_4.keras"
+# Si True y no pasas --model-path, muestra selector interactivo en terminal
+# con archivos exactos modelo_camino_N.keras (sin timestamp).
+SELECT_MODEL_FROM_TERMINAL = True
 # Si MODELO_REALTIME está vacío y no pasas --model-path, elige por índice:
 CANDIDATOS_EN_MODELS = [
     "modelo_camino_1.keras",
@@ -95,6 +109,17 @@ SWAP_CAMERA_INDICES_0_AND_1 = True
 SMOOTHING_ALPHA = 0.20
 PREDICTION_UPDATE_EVERY_N_FRAMES = 3
 BLUR_BACKGROUND = True
+RT_WINDOW_TITLE = "Reconocimiento de Emociones"
+# Primeros frames: intentar traer la ventana al frente (OpenCV a veces abre detrás).
+WINDOW_FOCUS_ATTEMPTS = 25
+
+
+def _bring_opencv_window_front(win_name: str) -> None:
+    try:
+        cv2.setWindowProperty(win_name, cv2.WND_PROP_TOPMOST, 1)
+        cv2.setWindowProperty(win_name, cv2.WND_PROP_TOPMOST, 0)
+    except Exception:
+        pass
 
 
 class DenseIgnoreQuantizationConfig(TFDense):
@@ -111,10 +136,47 @@ class DenseIgnoreQuantizationConfig(TFDense):
         super().__init__(*args, **kwargs)
 
 
+def _list_standard_model_files() -> list[Path]:
+    pattern = re.compile(r"^modelo_camino_(\d+)\.keras$")
+    found: list[tuple[int, Path]] = []
+    for p in MODELS_DIR.glob("*.keras"):
+        m = pattern.match(p.name)
+        if m:
+            found.append((int(m.group(1)), p))
+    found.sort(key=lambda x: x[0])
+    return [p for _, p in found]
+
+
+def _pick_model_from_terminal() -> Path | None:
+    models = _list_standard_model_files()
+    if not models:
+        print("No hay modelos estándar en models/ (modelo_camino_N.keras).")
+        return None
+
+    print("\nModelos disponibles (sin timestamp):")
+    for i, p in enumerate(models, start=1):
+        print(f"  {i}) {p.name}")
+
+    while True:
+        raw = input("Selecciona modelo por número [Enter = cancelar]: ").strip()
+        if raw == "":
+            return None
+        if raw.isdigit():
+            idx = int(raw)
+            if 1 <= idx <= len(models):
+                return models[idx - 1]
+        print("Opción inválida.")
+
+
 def _resolve_model_path() -> Path:
     if cli.model_path:
         p = Path(cli.model_path)
         return p if p.is_absolute() else (PROJECT_ROOT / p)
+
+    if SELECT_MODEL_FROM_TERMINAL:
+        picked = _pick_model_from_terminal()
+        if picked is not None:
+            return picked
 
     ruta = (MODELO_REALTIME or "").strip()
     if ruta:
@@ -166,7 +228,15 @@ except NameError as e:
     else:
         raise
 
+# Tras cargar el grafo / warm-up, TensorFlow a veces vuelve a subir verbosidad.
+quiet_console.silence_tensorflow_post_import()
+
 print(f"Modelo cargado: {model_path.name} (transfer EfficientNet usa preprocess en grafo o legacy abajo)")
+_model_match = re.match(r"^modelo_camino_(\d+)\.keras$", model_path.name)
+if _model_match:
+    RUNNING_MODEL_LABEL = f"Corriendo: modelo camino {_model_match.group(1)}"
+else:
+    RUNNING_MODEL_LABEL = f"Corriendo: {model_path.name}"
 
 emotion_labels = EMOTION_LIST
 
@@ -188,10 +258,11 @@ if not cap.isOpened():
     sys.exit(1)
 
 faceClassif = cv2.CascadeClassifier(cv2.data.haarcascades + "haarcascade_frontalface_default.xml")
-cv2.namedWindow("Reconocimiento de Emociones")
+cv2.namedWindow(RT_WINDOW_TITLE, cv2.WINDOW_NORMAL)
 smoothed_probs = None
 cached_probs = None
 frame_index = 0
+window_focus_tick = 0
 
 
 def draw_emotion_panel(frame, probs, labels):
@@ -318,10 +389,22 @@ while cap.isOpened():
         cached_probs = None
 
     draw_emotion_panel(display_frame, panel_probs, emotion_labels)
-    cv2.imshow("Reconocimiento de Emociones", display_frame)
+    cv2.putText(
+        display_frame,
+        RUNNING_MODEL_LABEL,
+        (10, 24),
+        cv2.FONT_HERSHEY_SIMPLEX,
+        0.60,
+        (225, 105, 65),  
+        2,
+    )
+    cv2.imshow(RT_WINDOW_TITLE, display_frame)
+    if window_focus_tick < WINDOW_FOCUS_ATTEMPTS:
+        _bring_opencv_window_front(RT_WINDOW_TITLE)
+        window_focus_tick += 1
 
     key = cv2.waitKey(1) & 0xFF
-    if key == 27 or cv2.getWindowProperty("Reconocimiento de Emociones", cv2.WND_PROP_VISIBLE) < 1:
+    if key == 27 or cv2.getWindowProperty(RT_WINDOW_TITLE, cv2.WND_PROP_VISIBLE) < 1:
         break
 
 cap.release()

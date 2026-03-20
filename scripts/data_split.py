@@ -11,47 +11,22 @@ Paso 2 del flujo (después de tener datos; ver README).
 import shutil
 from pathlib import Path
 import sys
+
 sys.path.insert(0, str(Path(__file__).resolve().parent))
+import quiet_console
+
+quiet_console.init()
+
 from sklearn.model_selection import train_test_split
+from project_config import DATASET_DIRS, DATA_SOURCE, PREPARED_DATA_DIR
 
-# =============================================================================
-# CONFIGURA AQUÍ
-#
-# Este script solo divide (split) y copia imágenes desde el "origen" hacia
-# data/prepared_data/{train,validation,test}/<clase>.
-#
-# En este proyecto manejamos 3 orígenes:
-# - Opción 1: "propias"  -> data/my_images (OpenCV guarda BGR)
-# - Opción 2: "fer_2013" -> data/FER_2013  (ya viene en RGB)
-# - Opción 3: "affectnet"-> data/AffectNet (ya viene en RGB)
-#
-# IMPORTANTE: para Kaggle (fer/affectnet) el contenido debe estar organizado
-# como carpetas por emoción: angry/, happy/, neutral/, surprise/.
-# =============================================================================
-PROJECT_ROOT = Path(__file__).resolve().parent.parent
+if DATA_SOURCE not in DATASET_DIRS:
+    print(f"Error: DATA_SOURCE inválido: {DATA_SOURCE!r}")
+    print("Usa DATA_SOURCE = 'fer_2013', 'affectnet' o 'my_images' en scripts/project_config.py")
+    sys.exit(1)
 
-# True = dividir desde datasets Kaggle (FER o AffectNet)
-# False = dividir desde datos propios capturados (data/my_images)
-USE_KAGGLE_DATABASE = True
-
-# En Kaggle puedes elegir cuál dataset usar como origen.
-# - "fer_2013"  -> data/FER_2013/
-# - "affectnet" -> data/AffectNet/
-KAGGLE_DATASET = "fer_2013"
-
-if USE_KAGGLE_DATABASE:
-    if KAGGLE_DATASET.lower() == "fer_2013":
-        DATA_DIR = PROJECT_ROOT / "data" / "FER_2013"
-    elif KAGGLE_DATASET.lower() == "affectnet":
-        DATA_DIR = PROJECT_ROOT / "data" / "AffectNet"
-    else:
-        print(f"Error: KAGGLE_DATASET inválido: {KAGGLE_DATASET!r}")
-        print("Usa KAGGLE_DATASET = 'fer_2013' o 'affectnet'")
-        sys.exit(1)
-else:
-    DATA_DIR = PROJECT_ROOT / "data" / "my_images"
-OUTPUT_DIR = PROJECT_ROOT / "data" / "prepared_data"
-# =============================================================================
+DATA_DIR = DATASET_DIRS[DATA_SOURCE]
+OUTPUT_DIR = PREPARED_DATA_DIR
 
 # --- CONFIGURACIÓN ---
 

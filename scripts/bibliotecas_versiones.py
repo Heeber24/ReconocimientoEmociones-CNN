@@ -25,6 +25,15 @@ def _fail(name: str, err: Exception, pip_hint: str) -> None:
 
 
 def main() -> int:
+    from pathlib import Path
+
+    _scripts = Path(__file__).resolve().parent
+    if str(_scripts) not in sys.path:
+        sys.path.insert(0, str(_scripts))
+    import quiet_console
+
+    quiet_console.init()
+
     print("Comprobación de librerías — ReconocimientoEmociones-CNN\n")
 
     try:
@@ -45,6 +54,7 @@ def main() -> int:
     try:
         import cv2
 
+        quiet_console.silence_opencv()
         _ok("OpenCV (cv2)", cv2.__version__, "pip install opencv-python")
     except ImportError as e:
         _fail("OpenCV", e, "pip install opencv-python")

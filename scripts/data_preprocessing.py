@@ -17,35 +17,22 @@ import argparse
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
+import quiet_console
+
+quiet_console.init()
 
 from tensorflow.keras.preprocessing.image import ImageDataGenerator  # type: ignore
 
-# =============================================================================
-# CONFIGURA AQUÍ
-#
-# Para este proyecto:
-# - Si usas datos "propias" (OpenCV webcam) -> USE_KAGGLE_DATABASE=False -> BGR en disco
-# - Si usas datos Kaggle (FER_2013/AffectNet) -> USE_KAGGLE_DATABASE=True -> ya vienen en RGB
-#
-# Nota: el nombre del dataset Kaggle (FER_2013 vs AffectNet) no cambia el preprocesado
-# aquí, porque en ambos casos esperamos imágenes listas para RGB.
-# =============================================================================
-PROJECT_ROOT = Path(__file__).resolve().parent.parent
+quiet_console.silence_tensorflow_post_import()
 
-# True = preprocesar datasets Kaggle (FER_2013 o AffectNet)
-# False = preprocesar datos propios capturados (data/my_images)
-USE_KAGGLE_DATABASE = True
+from project_config import DATA_SOURCE, PREPARED_DATA_DIR
 
-# Solo informativo (si quieres entrenar con AffectNet, pon USE_KAGGLE_DATABASE=True
-# igual; el origen ya lo eliges en data_split.py con KAGGLE_DATASET).
-KAGGLE_DATASET = "fer_2013"  # "fer_2013" o "affectnet"
-
-PREPARED_DATA = PROJECT_ROOT / "data" / "prepared_data"
+PREPARED_DATA = PREPARED_DATA_DIR
 DATA_ROOT = PREPARED_DATA
 TRAIN_DIR = DATA_ROOT / "train"
 VALIDATION_DIR = DATA_ROOT / "validation"
 TEST_DIR = DATA_ROOT / "test"
-IMAGES_ARE_BGR = not USE_KAGGLE_DATABASE  # BGR en propias; Kaggle (FER_2013/AffectNet) ya en RGB
+IMAGES_ARE_BGR = DATA_SOURCE == "my_images"
 # =============================================================================
 
 # Parámetros de imagen usados en todo el proyecto (captura, transfer ImageNet, CNN desde cero)

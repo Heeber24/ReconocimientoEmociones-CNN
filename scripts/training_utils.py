@@ -10,6 +10,14 @@ import sys
 from datetime import datetime
 from pathlib import Path
 
+_scripts_dir = Path(__file__).resolve().parent
+if str(_scripts_dir) not in sys.path:
+    sys.path.insert(0, str(_scripts_dir))
+
+import quiet_console
+
+quiet_console.init()
+
 import numpy as np
 import tensorflow as tf
 from tensorflow.keras.applications import EfficientNetB0  # type: ignore
@@ -28,7 +36,7 @@ from tensorflow.keras.layers import (  # type: ignore
 )
 from tensorflow.keras.models import Sequential, load_model  # type: ignore
 
-sys.path.insert(0, str(Path(__file__).resolve().parent))
+quiet_console.silence_tensorflow_post_import()
 
 # =============================================================================
 # MODELOS POR CAMINO (un archivo principal por número; no se pisan entre sí)

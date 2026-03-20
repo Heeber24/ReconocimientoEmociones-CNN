@@ -6,7 +6,7 @@ Este trabajo tiene como **objetivo** servir de **ejemplo práctico** de cómo ab
 
 No sustituye un curso completo de aprendizaje profundo, pero muestra un **flujo ordenado** que puedes seguir, modificar y documentar para clase o entrega.
 
-**Importante:** no hay un `config.py` central. La configuración va en bloques **CONFIGURA** al inicio de cada script (`USE_KAGGLE_DATABASE`, `KAGGLE_DATASET`, rutas, modelo en realtime, etc.).
+**Importante:** la selección de dataset se centraliza en `scripts/project_config.py` con `DATA_SOURCE` (`fer_2013`, `affectnet`, `my_images`), y la reutilizan `data_split.py`, `data_preprocessing.py` y `realtime_emotion_recognition.py`.
 
 ---
 
@@ -99,7 +99,7 @@ Las proporciones están fijadas en código: **70 % train**, **15 % validation**,
 Utiliza **OpenCV** para capturar rostros en tiempo real con la **webcam**. Los recortes se redimensionan a **224×224 píxeles en color** (BGR al guardar; en el preprocesado se pasa a RGB para el modelo). Cada imagen se guarda en una **carpeta** según la emoción elegida (`angry`, `happy`, `neutral`, `surprise`). El usuario elige emoción por menú y puede limitar cuántas imágenes captura por sesión. Es el paso opcional cuando trabajas con **datos propios** y no solo con FER.
 
 **`data_split.py`**  
-Organiza las imágenes del origen (`data/my_images`, `data/FER_2013` o `data/AffectNet`, según `USE_KAGGLE_DATABASE` + `KAGGLE_DATASET`) en tres subconjuntos: **entrenamiento**, **validación** y **prueba**. Crea la estructura bajo `data/prepared_data/train`, `validation` y `test`, con subcarpetas por emoción. **Antes de repartir, borra** la carpeta `prepared_data` anterior para no mezclar corridas viejas. Es un paso estándar en flujos de visión por computadora.
+Organiza las imágenes del origen (`data/my_images`, `data/FER_2013` o `data/AffectNet`, según `DATA_SOURCE` en `scripts/project_config.py`) en tres subconjuntos: **entrenamiento**, **validación** y **prueba**. Crea la estructura bajo `data/prepared_data/train`, `validation` y `test`, con subcarpetas por emoción. **Antes de repartir, borra** la carpeta `prepared_data` anterior para no mezclar corridas viejas. Es un paso estándar en flujos de visión por computadora.
 
 **`data_preprocessing.py`**  
 Prepara la **lectura** de las imágenes para el entrenamiento: **normalización** (por ejemplo escala 0–1), **augmentation** en entrenamiento (rotaciones, brillo, etc.) y creación de **generadores** de Keras listos para `model.fit`. Al ejecutarlo como script, valida que existan train/validation, muestra conteos y comprueba que los generadores cargan sin error. El entrenamiento en `training_utils.py` **reutiliza** estas mismas funciones.
@@ -146,7 +146,7 @@ ReconocimientoEmociones-CNN/
 
 ## 6. Flujo típico (orden de ejecución)
 
-1. Misma **`USE_KAGGLE_DATABASE`** en `data_split.py` y `data_preprocessing.py` (`False` = propias, `True` = Kaggle: FER o AffectNet).
+1. Define **`DATA_SOURCE`** en `scripts/project_config.py` (`my_images`, `fer_2013`, `affectnet`).
 2. `python scripts/data_split.py`  
 3. `python scripts/data_preprocessing.py`  
 4. Misma bandera en el `generate_model_path_N.py` que vayas a usar.  
@@ -172,7 +172,7 @@ Cada uno guarda su archivo principal en **`models/modelo_camino_N.keras`** y una
 
 ## 8. Dónde configurar (resumen)
 
-- Origen de datos: **`data_split.py`** y **`data_preprocessing.py`** (`USE_KAGGLE_DATABASE`).
+- Origen de datos (global): **`scripts/project_config.py`** (`DATA_SOURCE`).
 - Nombres de los seis checkpoints: **`training_utils.py`**.  
 - Qué camino corres: cada **`generate_model_path_*.py`**.  
 - Base en 5 y 6: variable **`MODELO_BASE`** en esos scripts.  
@@ -223,10 +223,9 @@ Pasos alineados con este proyecto:
    - AffectNet: **`data/AffectNet/`**
    Con **subcarpetas por emoción** y los mismos nombres que usa el proyecto (`angry`, `happy`, `neutral`, `surprise`).
 3. En Colab: monta Drive, descomprime o clona el proyecto, `cd` a la raíz (donde está `requirements.txt`). Guía detallada celda por celda: **`NOTAS_TECNICAS.txt`**, sección **6**.
-4. En **`data_split.py`** y **`data_preprocessing.py`** pon **`USE_KAGGLE_DATABASE = True`**.
-   Si es FER_2013 pon **`KAGGLE_DATASET = "fer_2013"`** y si es AffectNet pon **`KAGGLE_DATASET = "affectnet"`** en `data_split.py`.
+4. En **`scripts/project_config.py`** define **`DATA_SOURCE = "fer_2013"`** o **`"affectnet"`** según el dataset que vayas a usar.
 5. Ejecuta **`data_split.py`** y **`data_preprocessing.py`**.
-6. Entrena **camino 3** (CNN + Kaggle) o **camino 4** (EfficientNet + Kaggle); en ese `generate_model_path_*.py` debe ir la **misma** `USE_KAGGLE_DATABASE = True`.
+6. Entrena **camino 3** (CNN + dataset base) o **camino 4** (EfficientNet + dataset base).
 7. Copia **`modelo_camino_3.keras`** o **`modelo_camino_4.keras`** a Drive o **descárgalo** a tu PC para probarlo con **`realtime_emotion_recognition.py`** (y ajusta **`TRAINED_DATA_SOURCE`** acorde al modelo).
 
 ### 11.3 ¿Va a salir “tan bueno” como con tus imágenes?
