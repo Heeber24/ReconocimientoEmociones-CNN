@@ -5,7 +5,12 @@ NOTAS TECNICAS - AMBIENTE, LIBRERIAS, VENV, COLAB, GPU
 Este archivo NO da por hecho que ya sabes crear entornos virtuales ni usar Colab.
 Si algo falla, copia el mensaje de error y buscalo o pregunta en clase.
 
-No existe config.py en el proyecto: cada script tiene su bloque CONFIGURA.
+Configuracion global de dataset: scripts/project_config.py (DATA_SOURCE). Ademas,
+varios scripts tienen un bloque CONFIGURA AQUI para rutas, camara, modelo, etc.
+
+scripts/quiet_console.py reduce warnings y logs de TensorFlow/OpenCV; no lo borres:
+lo importan data_split, data_preprocessing, run_model_path, training_utils,
+data_collection, realtime_emotion_recognition, assistant_flow, bibliotecas_versiones.
 
 ================================================================================
 1) QUE ES UN ENTORNO VIRTUAL (venv) Y PARA QUE SIRVE
@@ -143,22 +148,38 @@ Lista de paquetes: archivo requirements.txt en la raiz del proyecto.
   python scripts/bibliotecas_versiones.py
   python scripts/data_preprocessing.py
 
+Flujo guiado (opcional): python scripts/assistant_flow.py
+Entrenar un camino: python scripts/run_model_path.py --path 1
+
 ================================================================================
 4) CONFIGURACION DISTRIBUIDA (recordatorio)
 ================================================================================
 
 - Fuente global de datos: scripts/project_config.py (DATA_SOURCE).
-- training_utils.py: MODEL_CAMINO_1 … MODEL_CAMINO_6.
-- Caminos 5 y 6: MODELO_BASE en el script correspondiente.
-- realtime_emotion_recognition.py: MODELO_REALTIME, INDICE_MODELO, TRAINED_DATA_SOURCE.
+- training_utils.py: MODEL_CAMINO_1 … MODEL_CAMINO_6 y logica de entrenamiento.
+- Que camino entrenar (1..6): scripts/run_model_path.py (--path N o menu interactivo).
+- Caminos 5 y 6: al ejecutar run_model_path.py te pide MODELO_BASE y valida reglas.
+- realtime_emotion_recognition.py: MODELO_REALTIME, SELECT_MODEL_FROM_TERMINAL,
+  INDICE_MODELO, CANDIDATOS_EN_MODELS, TRAINED_DATA_SOURCE (sigue a DATA_SOURCE).
+- data_collection.py: SWAP_CAMERA_INDICES_0_AND_1 (misma idea que realtime), BLUR_BACKGROUND,
+  cierre con X de ventana; si cierras mientras capturas, tkinter pregunta confirmacion.
+- Consola menos ruidosa: quiet_console.py (init + silence_tensorflow_post_import tras Keras).
 
 ================================================================================
 5) ORDEN DE EJECUCION LOCAL
 ================================================================================
 
-  data_split.py -> data_preprocessing.py -> generate_model_path_N.py
+  (opcional) data_collection.py  si usas my_images
+  data_split.py -> data_preprocessing.py -> run_model_path.py --path N
+
+run_model_path.py NO ejecuta split ni preprocess: deben ir antes (o usar assistant_flow.py
+que los encadena tras un menu post-captura).
 
 data_split borra prepared_data antes de repartir.
+
+Modo guiado: assistant_flow.py
+  - Tras cerrar data_collection, menu obligatorio: capturar de nuevo, continuar con split,
+    reiniciar asistente o salir (evita seguir al split sin querer).
 
 ================================================================================
 6) GOOGLE COLAB (guia paso a paso)
@@ -240,7 +261,7 @@ Cada comando en una celda con ! al inicio, siempre con %cd en la raiz del proyec
 
   !python scripts/data_split.py
   !python scripts/data_preprocessing.py
-  !python scripts/generate_model_path_1.py
+  !python scripts/run_model_path.py --path 1
 
 Antes de split/preprocess, sube tus imagenes a Drive y copia la estructura
 esperada (data/my_images, data/FER_2013 o data/AffectNet) o sube un zip y
@@ -346,8 +367,8 @@ https://drive.google.com/drive/folders/1U03VkNE9UVSIe2YlgdwhZ39utDarJoj9?usp=sha
 
    - En scripts/project_config.py define DATA_SOURCE = "fer_2013" o "affectnet"
    - Ejecutar: data_split.py -> data_preprocessing.py (ver 6.6)
-   - En el generate_model_path_3.py o generate_model_path_4.py solo ejecuta el camino deseado
-   - Entrenar y luego bajar el .keras (6.7).
+   - Entrenar camino 3 o 4: run_model_path.py --path 3   o   --path 4
+   - Luego bajar el .keras (6.7).
 
 Si prefieres subir el proyecto como .zip desde la PC en lugar de git clone,
 sigue 6.1 y 6.4; el destino (data/FER_2013 o data/AffectNet) y el resto del flujo es el mismo.
@@ -369,11 +390,37 @@ sigue la guia oficial de instalacion de TensorFlow para tu version.
 8) ENTRENAMIENTO Y REALTIME (recordatorio corto)
 ================================================================================
 
-Entrenamiento: scripts/training_utils.py (llamado desde generate_model_path_*.py).
-Realtime local: scripts/realtime_emotion_recognition.py (OpenCV + camara).
+Entrenamiento: scripts/training_utils.py (invocado desde run_model_path.py).
+Realtime local: scripts/realtime_emotion_recognition.py (OpenCV + camara, --model-path, etc.).
 
 ================================================================================
-9) GIT Y ARCHIVOS PESADOS
+9) ASSISTANT_FLOW, CAPTURA Y CONSOLA (detalle)
+================================================================================
+
+assistant_flow.py
+  - Pregunta camino 1-6, ajusta DATA_SOURCE en project_config.py en disco.
+  - Si la fuente es my_images: puede lanzar data_collection.py; al terminar la ventana de
+    captura NO continua solo al split: muestra menu (capturar otra vez / continuar con split
+    / reiniciar asistente / salir).
+  - Si split, preprocess o train fallan, ofrece volver al inicio del asistente.
+
+data_collection.py (alineado con realtime en lo posible)
+  - Seleccion de camara 0/1 con el mismo swap que realtime (SWAP_CAMERA_INDICES_0_AND_1).
+  - Fondo difuminado + rostro nitido en pantalla; las imagenes guardadas son del frame nitido.
+  - Texto de ayuda en azul rey (BGR 225,105,65). Cierre con la X; ESC ya no se promueve.
+  - Si cierras con la X mientras capturas (is_capturing), tkinter pregunta si seguro
+    (en Windows suele venir tkinter con Python; sin tkinter podria cerrar sin dialogo).
+
+quiet_console.py
+  - init() lo antes posible; silence_opencv() tras import cv2 donde aplica;
+    silence_tensorflow_post_import() despues de importar Keras/TensorFlow.
+  - TF_CPP_MIN_LOG_LEVEL, TF_ENABLE_ONEDNN_OPTS (por defecto 0 para menos ruido oneDNN),
+    filterwarnings, loggers ERROR en tensorflow/keras/absl, etc.
+
+Los scripts viejos generate_model_path_1.py ... 6.py ya no existen: usa run_model_path.py.
+
+================================================================================
+10) GIT Y ARCHIVOS PESADOS
 ================================================================================
 
 Los modelos .keras suelen estar en .gitignore (no suben al repositorio).

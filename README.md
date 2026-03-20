@@ -95,26 +95,35 @@ Las proporciones están fijadas en código: **70 % train**, **15 % validation**,
 
 ## 3. Descripción detallada de los scripts
 
+**`project_config.py`**  
+Configuración **global** del origen de datos: variable **`DATA_SOURCE`**, con valor **`"my_images"`**, **`"fer_2013"`** o **`"affectnet"`**. Apunta a las carpetas bajo `data/` que usan `data_split.py`, `data_preprocessing.py` y la lógica de previsualización en `realtime_emotion_recognition.py`. **Cámbiala una sola vez** antes de split/preprocess/entrenar para que todo el pipeline sea coherente.
+
+**`quiet_console.py`**  
+Módulo **compartido** (no lo borres): reduce **warnings** y **logs** de TensorFlow, absl, OpenCV, etc. Lo importan casi todos los scripts al inicio (`init()`; y tras cargar TF, `silence_tensorflow_post_import()` donde aplica). Sirve para ver la consola más limpia al entrenar y al usar la cámara.
+
 **`data_collection.py`**  
-Utiliza **OpenCV** para capturar rostros en tiempo real con la **webcam**. Los recortes se redimensionan a **224×224 píxeles en color** (BGR al guardar; en el preprocesado se pasa a RGB para el modelo). Cada imagen se guarda en una **carpeta** según la emoción elegida (`angry`, `happy`, `neutral`, `surprise`). El usuario elige emoción por menú y puede limitar cuántas imágenes captura por sesión. Es el paso opcional cuando trabajas con **datos propios** y no solo con FER.
+Captura rostros con **OpenCV** y **webcam**. Recortes **224×224** en color (**BGR** al disco; el preprocesado pasa a **RGB** para el modelo). Menú interactivo: **emoción** y **cámara** (0 interna / 1 externa) con la **misma lógica de swap** que `realtime_emotion_recognition.py` (`SWAP_CAMERA_INDICES_0_AND_1`). Vista tipo **realtime**: fondo difuminado y rostro nítido (solo visual; **las imágenes guardadas siguen siendo nítidas**). Marco verde explícito de **“zona que se guarda”** mientras capturas. Texto de ayuda en **azul rey** (BGR). **Cierra con la X** de la ventana (no se insiste en ESC); si cierras **mientras capturas**, **tkinter** pregunta si seguro. Tras cerrar, el **asistente guiado** (`assistant_flow.py`) ya no enchaina el split solo: pide confirmación (ver abajo).
 
 **`data_split.py`**  
-Organiza las imágenes del origen (`data/my_images`, `data/FER_2013` o `data/AffectNet`, según `DATA_SOURCE` en `scripts/project_config.py`) en tres subconjuntos: **entrenamiento**, **validación** y **prueba**. Crea la estructura bajo `data/prepared_data/train`, `validation` y `test`, con subcarpetas por emoción. **Antes de repartir, borra** la carpeta `prepared_data` anterior para no mezclar corridas viejas. Es un paso estándar en flujos de visión por computadora.
+Lee el origen según **`DATA_SOURCE`** (`data/my_images`, `data/FER_2013` o `data/AffectNet`) y reparte en **train / validation / test** bajo **`data/prepared_data/`**. **Borra** la carpeta `prepared_data` anterior antes de copiar. Clases = subcarpetas por emoción (`angry`, `happy`, `neutral`, `surprise`).
 
 **`data_preprocessing.py`**  
-Prepara la **lectura** de las imágenes para el entrenamiento: **normalización** (por ejemplo escala 0–1), **augmentation** en entrenamiento (rotaciones, brillo, etc.) y creación de **generadores** de Keras listos para `model.fit`. Al ejecutarlo como script, valida que existan train/validation, muestra conteos y comprueba que los generadores cargan sin error. El entrenamiento en `training_utils.py` **reutiliza** estas mismas funciones.
+Define **normalización**, **data augmentation** y **generadores** `ImageDataGenerator` usados por `training_utils.py`. Si **`DATA_SOURCE == "my_images"`**, convierte **BGR→RGB** al leer (OpenCV guarda BGR). Al ejecutarlo como script valida rutas y conteos.
 
 **`training_utils.py`**  
-Aquí está la **lógica pesada** del entrenamiento: construcción de la CNN desde cero, modelo con **EfficientNetB0** e ImageNet, y transfer **desde un modelo ya guardado** (caminos 5 y 6). Incluye **callbacks** (por ejemplo guardar el mejor modelo por `val_loss` o `val_accuracy`, **EarlyStopping**, **ReduceLROnPlateau** según el caso) y al final **evalúa en el conjunto de prueba**. También define las rutas **`modelo_camino_1.keras` … `modelo_camino_6.keras`**. Las carpetas `train/`, `validation/`, `test/` las toma desde `data_preprocessing.py`.
+Lógica de **entrenamiento**: CNN desde cero, **EfficientNetB0** (ImageNet) y **transfer** desde modelo guardado (caminos 5 y 6). **Callbacks**, evaluación en **test** y rutas fijas **`models/modelo_camino_1.keras` … `modelo_camino_6.keras`** (más copias etiquetadas con fecha/accuracy).
 
-**`generate_model_path_1.py` … `generate_model_path_6.py`**  
-Scripts **cortos** que solo fijan **qué camino** corres (datos propios vs dataset base, coherente con split/preprocess) y llaman a la función adecuada en `training_utils.py`. Así el flujo pedagógico queda claro: primero datos, luego el número de camino que quieras experimentar.
+**`run_model_path.py`**  
+**Único punto de entrada** para entrenar un camino **1…6**: menú interactivo o **`python scripts/run_model_path.py --path N`**. Valida que **`DATA_SOURCE`** en `project_config.py` coincida con lo que exige ese camino (propias vs FER/AffectNet). En **5 y 6** pide el **modelo base** (`MODELO_BASE`) y avisa si no cumple la regla pedagógica del curso. **No** ejecuta split ni preprocess por ti: debes haber corrido **`data_split.py`** y **`data_preprocessing.py`** antes (o usar `assistant_flow.py`).
+
+**`assistant_flow.py`**  
+**Modo guiado** para alumnos: elige camino → ajusta `DATA_SOURCE` en disco → si toca **`my_images`**, opción de **capturar**. **Importante:** cada vez que termina **`data_collection.py`**, muestra un **menú obligatorio**: capturar de nuevo, **continuar con split** usando lo que hay en disco, **reiniciar el asistente** desde el inicio o salir. Así **no** se lanza el split **en automático** al cerrar la ventana sin haber confirmado. Luego ejecuta en cadena: **`data_split.py`** → **`data_preprocessing.py`** → **`run_model_path.py --path N`**. Si falla un paso, ofrece **volver al inicio**.
 
 **`realtime_emotion_recognition.py`**  
-Script de **reconocimiento en tiempo real**: abre la cámara, detecta rostros (Haar Cascade), recorta la región, la prepara según el tipo de modelo y pasa el tensor por la **red cargada** (`.keras`). Muestra la emoción predicha y un panel con **probabilidades** por clase sobre el video.
+Reconocimiento **en vivo**: Haar Cascade, ROI según **`TRAINED_DATA_SOURCE`** (derivado de `DATA_SOURCE`: gris+RGB para FER, color para AffectNet/my_images con BGR si aplica). Carga **`.keras`** con compatibilidad (`custom_objects`, `Dense` sin `quantization_config` problemático). **`--model-path`**, **`--camera`**, **`--no-swap-camera`**, selector opcional de **`modelo_camino_N.keras`** en terminal (`SELECT_MODEL_FROM_TERMINAL`), etiqueta en pantalla del modelo en uso, panel de probabilidades, fondo difuminado. Ventana con **X** para cerrar (comportamiento tipo `WND_PROP_VISIBLE`). Consola atenuada vía **`quiet_console`**.
 
 **`bibliotecas_versiones.py`**  
-Comprueba imports y versiones de las dependencias principales; úsalo después de `pip install -r requirements.txt`.
+Comprueba dependencias; al ejecutarlo usa también **`quiet_console`** al inicio de `main()`.
 
 ---
 
@@ -131,6 +140,16 @@ Comprueba imports y versiones de las dependencias principales; úsalo después d
 ```text
 ReconocimientoEmociones-CNN/
 ├── scripts/
+│   ├── project_config.py      (DATA_SOURCE global)
+│   ├── quiet_console.py       (warnings / logs; no eliminar)
+│   ├── data_collection.py
+│   ├── data_split.py
+│   ├── data_preprocessing.py
+│   ├── training_utils.py
+│   ├── run_model_path.py      (entrenar camino 1–6)
+│   ├── assistant_flow.py      (flujo guiado alumnos)
+│   ├── realtime_emotion_recognition.py
+│   └── bibliotecas_versiones.py
 ├── data/
 │   ├── my_images/             (captura propia)
 │   ├── FER_2013/              (dataset base 1)
@@ -146,14 +165,26 @@ ReconocimientoEmociones-CNN/
 
 ## 6. Flujo típico (orden de ejecución)
 
-1. Define **`DATA_SOURCE`** en `scripts/project_config.py` (`my_images`, `fer_2013`, `affectnet`).
-2. `python scripts/data_split.py`  
-3. `python scripts/data_preprocessing.py`  
-4. Misma bandera en el `generate_model_path_N.py` que vayas a usar.  
-5. `python scripts/generate_model_path_N.py`  
-6. Para webcam: configura y ejecuta `python scripts/realtime_emotion_recognition.py` (o `--model-path`).
+### 6.1 Manual (control total)
 
-**Caminos 5 y 6:** necesitas antes **`modelo_camino_3.keras`** (camino 5) o **`modelo_camino_1.keras`** (camino 6), luego cambias datos y vuelves a split + preprocess.
+1. **`DATA_SOURCE`** en `scripts/project_config.py` (`my_images`, `fer_2013`, `affectnet`).
+2. Si usas **datos propios**: `python scripts/data_collection.py` (tantas veces como necesites).
+3. `python scripts/data_split.py`
+4. `python scripts/data_preprocessing.py`
+5. Entrenar un camino: **`python scripts/run_model_path.py --path N`** (N = 1…6) o `python scripts/run_model_path.py` y elige en el menú.
+6. Prueba en cámara: `python scripts/realtime_emotion_recognition.py` (y/o `--model-path`, `--camera`).
+
+**`run_model_path.py` no corre split ni preprocess** por sí solo: el orden 3 → 4 → 5 es obligatorio antes de entrenar.
+
+### 6.2 Modo guiado (recomendado si empiezas)
+
+```text
+python scripts/assistant_flow.py
+```
+
+Te lleva por camino 1–6, fuente de datos, captura opcional **`my_images`**, y **después de cada sesión de `data_collection`** debes elegir explícitamente si **continuar al split** o **volver a capturar / reiniciar**. Luego encadena split → preprocess → `run_model_path.py`.
+
+**Caminos 5 y 6:** necesitas **`modelo_camino_3.keras`** (5) o **`modelo_camino_1.keras`** (6); el script te pide ruta de base y valida coherencia con `DATA_SOURCE`.
 
 ---
 
@@ -173,17 +204,21 @@ Cada uno guarda su archivo principal en **`models/modelo_camino_N.keras`** y una
 ## 8. Dónde configurar (resumen)
 
 - Origen de datos (global): **`scripts/project_config.py`** (`DATA_SOURCE`).
-- Nombres de los seis checkpoints: **`training_utils.py`**.  
-- Qué camino corres: cada **`generate_model_path_*.py`**.  
-- Base en 5 y 6: variable **`MODELO_BASE`** en esos scripts.  
-- Cámara: **`realtime_emotion_recognition.py`** (`MODELO_REALTIME`, `INDICE_MODELO`, **`TRAINED_DATA_SOURCE`**).
+- Nombres de los seis checkpoints: **`training_utils.py`** (`MODEL_CAMINO_1` … `MODEL_CAMINO_6`).
+- Qué camino entrenar: **`run_model_path.py`** (`--path N` o menú). **Ya no** existen `generate_model_path_1.py` … `6.py`.
+- Base en caminos **5 y 6**: **`MODELO_BASE`** (y prompts) dentro de **`run_model_path.py`** al ejecutarlo.
+- Cámara y modelo en vivo: **`realtime_emotion_recognition.py`** (`MODELO_REALTIME`, `SELECT_MODEL_FROM_TERMINAL`, `INDICE_MODELO`, `CANDIDATOS_EN_MODELS`, **`TRAINED_DATA_SOURCE`** / `DATA_SOURCE`, flags **`--model-path`**, **`--camera`**, **`--no-swap-camera`**).
+- Captura: **`data_collection.py`** (`SWAP_CAMERA_INDICES_0_AND_1`, `BLUR_BACKGROUND`, `MAX_IMAGES`, etc.).
+- Consola silenciosa: **`quiet_console.py`** (no borrar; lo usan los demás scripts).
 
 ---
 
 ## 9. Realtime
 
-- Prioridad: **`--model-path`**.  
-- Si no: **`MODELO_REALTIME`** o **`INDICE_MODELO`** + lista **`CANDIDATOS_EN_MODELS`**.
+- Prioridad: argumento **`--model-path`**.
+- Si no: con **`SELECT_MODEL_FROM_TERMINAL = True`** puedes elegir en consola un **`modelo_camino_N.keras`** estándar; si no, **`MODELO_REALTIME`** o **`INDICE_MODELO`** + **`CANDIDATOS_EN_MODELS`**.
+- **`TRAINED_DATA_SOURCE`** sigue a **`DATA_SOURCE`** de `project_config.py` para el preprocesado del ROI (FER gris→RGB, etc.).
+- Cierra la ventana con la **X** (misma idea que en captura). TensorFlow/OpenCV suelen ir más callados gracias a **`quiet_console`**.
 
 ---
 
@@ -225,8 +260,8 @@ Pasos alineados con este proyecto:
 3. En Colab: monta Drive, descomprime o clona el proyecto, `cd` a la raíz (donde está `requirements.txt`). Guía detallada celda por celda: **`NOTAS_TECNICAS.txt`**, sección **6**.
 4. En **`scripts/project_config.py`** define **`DATA_SOURCE = "fer_2013"`** o **`"affectnet"`** según el dataset que vayas a usar.
 5. Ejecuta **`data_split.py`** y **`data_preprocessing.py`**.
-6. Entrena **camino 3** (CNN + dataset base) o **camino 4** (EfficientNet + dataset base).
-7. Copia **`modelo_camino_3.keras`** o **`modelo_camino_4.keras`** a Drive o **descárgalo** a tu PC para probarlo con **`realtime_emotion_recognition.py`** (y ajusta **`TRAINED_DATA_SOURCE`** acorde al modelo).
+6. Entrena con **`python scripts/run_model_path.py --path 3`** (CNN + dataset base) o **`--path 4`** (EfficientNet + dataset base).
+7. Copia **`modelo_camino_3.keras`** o **`modelo_camino_4.keras`** a Drive o **descárgalo** a tu PC para probarlo con **`realtime_emotion_recognition.py`** (ajusta **`DATA_SOURCE`** / **`TRAINED_DATA_SOURCE`** acorde al modelo y al dominio).
 
 ### 11.3 ¿Va a salir “tan bueno” como con tus imágenes?
 
@@ -242,4 +277,4 @@ En la práctica: usa la **métrica en test** del script como referencia honesta 
 
 ## 12. Más detalle técnico
 
-**`NOTAS_TECNICAS.txt`** — venv explicado desde cero, Colab paso a paso, GPU local, git/archivos pesados.
+**`NOTAS_TECNICAS.txt`** — venv desde cero, Colab paso a paso, GPU local, orden con **`run_model_path.py`**, sección **9** (`assistant_flow`, captura, `quiet_console`), git/archivos pesados (sección **10**).
