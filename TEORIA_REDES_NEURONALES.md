@@ -2,6 +2,8 @@
 
 Documento de apoyo académico: **definiciones**, **formulación matemática cuando aplica**, **ejemplos teóricos** y **referencias explícitas al código** del repositorio *ReconocimientoEmociones-CNN*. El objetivo es justificar por qué el diseño del sistema (CNN, transfer learning, preprocesado, frameworks) es coherente con la práctica estándar en visión por computador.
 
+> **Lectura en GitHub:** las fórmulas usan la sintaxis que GitHub renderiza como matemática: **`$...$`** (inline) y **`$$...$$`** (bloque). Si ves texto crudo tipo `( f_\theta` sin renderizar, abre el archivo en **github.com** (vista del repositorio), no solo el texto copiado. Documentación: [Writing mathematical expressions](https://docs.github.com/en/get-started/writing-on-github/working-with-advanced-formatting/writing-mathematical-expressions).
+
 ---
 
 ## Índice temático sugerido
@@ -24,9 +26,9 @@ Documento de apoyo académico: **definiciones**, **formulación matemática cuan
 
 ## Problema que resuelve el proyecto
 
-**Definición (tarea).** Se trata de **clasificación supervisada de imágenes**: cada imagen de rostro pertenece a una de cuatro clases de emoción (`angry`, `happy`, `neutral`, `surprise`). La red debe aprender una función \( f_\theta : \mathbb{R}^{H \times W \times 3} \rightarrow \mathbb{R}^{4} \) que asigne a cada imagen un vector de probabilidades sobre las clases.
+**Definición (tarea).** Se trata de **clasificación supervisada de imágenes**: cada imagen de rostro pertenece a una de cuatro clases de emoción (`angry`, `happy`, `neutral`, `surprise`). La red debe aprender una función $f_\theta : \mathbb{R}^{H \times W \times 3} \rightarrow \mathbb{R}^{4}$ que asigne a cada imagen un vector de probabilidades sobre las clases.
 
-**Ejemplo teórico.** Una imagen de entrada \( x \) de tamaño \( 224 \times 224 \times 3 \) pasa por la red; la salida final es un vector \( p = (p_1,\ldots,p_4) \) con \( p_k \geq 0 \) y \( \sum_k p_k = 1 \) (softmax). La clase predicha es \( \arg\max_k p_k \).
+**Ejemplo teórico.** Una imagen de entrada $x$ de tamaño $224 \times 224 \times 3$ pasa por la red; la salida final es un vector $p = (p_1,\ldots,p_4)$ con $p_k \geq 0$ y $\sum_k p_k = 1$ (softmax). La clase predicha es $\arg\max_k p_k$.
 
 **En este proyecto.** Las rutas de datos van de `data/prepared_data/train|validation|test` (generadas por `data_split.py`). El tamaño de entrada al modelo es **224×224×3** (RGB), alineado con EfficientNet y con la captura en `data_collection.py`. Los generadores en `data_preprocessing.py` usan `class_mode="categorical"` (etiquetas one-hot), coherente con `categorical_crossentropy` y softmax.
 
@@ -34,17 +36,17 @@ Documento de apoyo académico: **definiciones**, **formulación matemática cuan
 
 ## Función de coste y clasificación multiclase
 
-**Definición.** La **función de coste** (o **pérdida**) mide la discrepancia entre la predicción del modelo y la etiqueta verdadera. El entrenamiento busca parámetros \( \theta \) que **minimicen** el valor esperado de esa pérdida sobre los datos.
+**Definición.** La **función de coste** (o **pérdida**) mide la discrepancia entre la predicción del modelo y la etiqueta verdadera. El entrenamiento busca parámetros $\theta$ que **minimicen** el valor esperado de esa pérdida sobre los datos.
 
-**Formulación.** En clasificación multiclase con etiquetas one-hot \( y \in \{0,1\}^K \) y probabilidades predichas \( \hat{p} \) (salida softmax), la **entropía cruzada categórica** es:
+**Formulación.** En clasificación multiclase con etiquetas one-hot $y \in \{0,1\}^K$ y probabilidades predichas $\hat{p}$ (salida softmax), la **entropía cruzada categórica** es:
 
-\[
+$$
 L_{\text{CE}} = - \sum_{k=1}^{K} y_k \log(\hat{p}_k + \varepsilon)
-\]
+$$
 
-donde \( \varepsilon \) es un pequeño valor numérico para estabilidad. Si la clase verdadera es \( c \), solo el término \( -\log(\hat{p}_c) \) contribuye: penaliza fuerte cuando la probabilidad asignada a la clase correcta es baja.
+donde $\varepsilon$ es un pequeño valor numérico para estabilidad. Si la clase verdadera es $c$, solo el término $-\log(\hat{p}_c)$ contribuye: penaliza fuerte cuando la probabilidad asignada a la clase correcta es baja.
 
-**Ejemplo teórico.** Si la clase es “happy” y el modelo predice \( \hat{p}_{\text{happy}} = 0.9 \), el coste es \( -\log(0.9) \approx 0.105 \). Si predice \( \hat{p}_{\text{happy}} = 0.1 \), el coste es \( -\log(0.1) \approx 2.3 \), mucho mayor.
+**Ejemplo teórico.** Si la clase es “happy” y el modelo predice $\hat{p}_{\text{happy}} = 0.9$, el coste es $-\log(0.9) \approx 0.105$. Si predice $\hat{p}_{\text{happy}} = 0.1$, el coste es $-\log(0.1) \approx 2.3$, mucho mayor.
 
 **En este proyecto.** Todos los modelos se compilan con:
 
@@ -61,13 +63,13 @@ metrics=["accuracy"]
 
 ## Descenso del gradiente y optimizadores
 
-**Definición.** El **descenso del gradiente** actualiza los parámetros \( \theta \) en la dirección opuesta al gradiente de la pérdida \( L \) respecto a \( \theta \):
+**Definición.** El **descenso del gradiente** actualiza los parámetros $\theta$ en la dirección opuesta al gradiente de la pérdida $L$ respecto a $\theta$:
 
-\[
+$$
 \theta \leftarrow \theta - \alpha \nabla_\theta L
-\]
+$$
 
-donde \( \alpha > 0 \) es la **tasa de aprendizaje** (*learning rate*). En la práctica se usa el gradiente estimado sobre un **minilote** (*minibatch*) de ejemplos, no sobre todo el dataset (**descenso estocástico por minilotes**).
+donde $\alpha > 0$ es la **tasa de aprendizaje** (*learning rate*). En la práctica se usa el gradiente estimado sobre un **minilote** (*minibatch*) de ejemplos, no sobre todo el dataset (**descenso estocástico por minilotes**).
 
 **Optimizador Adam (idea).** **Adam** adapta tasas de aprendizaje efectivas por parámetro usando estimaciones de momentos de primer y segundo orden del gradiente. Sigue siendo un método de optimización basado en gradientes; suele converger con menos ajuste manual que el GD puro.
 
@@ -93,9 +95,9 @@ ReduceLROnPlateau(monitor="val_loss", factor=0.3, patience=5, min_lr=1e-6)
 
 ## Retropropagación del error
 
-**Definición.** La **retropropagación** (*backpropagation*) es el algoritmo que calcula \( \nabla_\theta L \) para todas las capas de la red aplicando la **regla de la cadena** de forma sistemática desde la capa de salida hacia la entrada. Sin backprop, no se podrían entrenar redes profundas de forma eficiente.
+**Definición.** La **retropropagación** (*backpropagation*) es el algoritmo que calcula $\nabla_\theta L$ para todas las capas de la red aplicando la **regla de la cadena** de forma sistemática desde la capa de salida hacia la entrada. Sin backprop, no se podrían entrenar redes profundas de forma eficiente.
 
-**Flujo conceptual.** (1) *Forward pass:* entrada → salida y pérdida \( L \). (2) *Backward pass:* derivadas \( \partial L / \partial \theta \) capa a capa. (3) El optimizador actualiza \( \theta \).
+**Flujo conceptual.** (1) *Forward pass:* entrada → salida y pérdida $L$. (2) *Backward pass:* derivadas $\partial L / \partial \theta$ capa a capa. (3) El optimizador actualiza $\theta$.
 
 **En este proyecto.** No se implementa backprop a mano. Al ejecutar `model.fit(...)` en `training_utils.py`, **TensorFlow** construye el grafo de operaciones y aplica diferenciación automática para obtener gradientes y actualizar pesos con Adam.
 
@@ -113,9 +115,9 @@ ReduceLROnPlateau(monitor="val_loss", factor=0.3, patience=5, min_lr=1e-6)
 
 - **Localidad:** patrones relevantes (bordes, texturas) son locales en el espacio.
 - **Invariancia aproximada a traslaciones:** el mismo filtro detecta un patrón en distintas posiciones.
-- **Reducción de parámetros:** frente a una capa fully connected sobre \( 224 \times 224 \times 3 \) píxeles, una convolución con pocos kernels mantiene el número de parámetros manejable.
+- **Reducción de parámetros:** frente a una capa fully connected sobre $224 \times 224 \times 3$ píxeles, una convolución con pocos kernels mantiene el número de parámetros manejable.
 
-**En este proyecto.** El **camino 1 y 3** usan una CNN construida con bloques `Conv2D` → `BatchNormalization` → `MaxPooling2D` → `Dropout`, seguidos de capas densas. Los **caminos 2 y 4** usan **EfficientNetB0** como extractor de características (CNN preentrenada). La inferencia en cámara (`realtime_emotion_recognition.py`) consume el mismo tipo de tensores \( 224 \times 224 \times 3 \).
+**En este proyecto.** El **camino 1 y 3** usan una CNN construida con bloques `Conv2D` → `BatchNormalization` → `MaxPooling2D` → `Dropout`, seguidos de capas densas. Los **caminos 2 y 4** usan **EfficientNetB0** como extractor de características (CNN preentrenada). La inferencia en cámara (`realtime_emotion_recognition.py`) consume el mismo tipo de tensores $224 \times 224 \times 3$.
 
 ---
 
@@ -126,11 +128,11 @@ ReduceLROnPlateau(monitor="val_loss", factor=0.3, patience=5, min_lr=1e-6)
 **Parámetros típicos (Keras / TensorFlow).**
 
 - **`filters`:** número de mapas de salida (profundidad de la salida).
-- **`kernel_size`:** tamaño espacial del filtro (ej. \( 3 \times 3 \)).
+- **`kernel_size`:** tamaño espacial del filtro (ej. $3 \times 3$).
 - **`padding`:** `"valid"` (sin relleno) o `"same"` (relleno para conservar tamaño espacial aproximado).
 - **`strides`:** desplazamiento del kernel (por defecto 1).
 
-**Ejemplo teórico.** Un kernel \( 3 \times 3 \) sobre un mapa de \( 32 \times 32 \) píxeles recorre posiciones vecinas y produce un mapa de activaciones que resalta, por ejemplo, bordes verticales según los pesos aprendidos.
+**Ejemplo teórico.** Un kernel $3 \times 3$ sobre un mapa de $32 \times 32$ píxeles recorre posiciones vecinas y produce un mapa de activaciones que resalta, por ejemplo, bordes verticales según los pesos aprendidos.
 
 **En este proyecto (CNN desde cero).**
 
@@ -314,9 +316,9 @@ pip install torch torchvision
 
 ### Unidades de activación
 
-**ReLU:** \( \text{ReLU}(x) = \max(0, x) \). Mitiga gradientes que se anulan en capas profundas (comparado con sigmoid/tanh en capas ocultas).
+**ReLU:** $\text{ReLU}(x) = \max(0, x)$. Mitiga gradientes que se anulan en capas profundas (comparado con sigmoid/tanh en capas ocultas).
 
-**Softmax:** \( \text{softmax}(z)_i = e^{z_i} / \sum_j e^{z_j} \). Salida probabilística multiclase.
+**Softmax:** $\text{softmax}(z)_i = e^{z_i} / \sum_j e^{z_j}$. Salida probabilística multiclase.
 
 **En el proyecto.** `activation="relu"` en convoluciones y densas ocultas; `activation="softmax"` en la última `Dense`. Ver `scripts/training_utils.py`.
 
