@@ -280,3 +280,6 @@ En la práctica: usa la **métrica en test** del script como referencia honesta 
 **`NOTAS_TECNICAS.txt`** — venv desde cero, Colab paso a paso, GPU local, orden con **`run_model_path.py`**, sección **9** (`assistant_flow`, captura, `quiet_console`), git/archivos pesados (sección **10**).
 
 **`TEORIA_REDES_NEURONALES.md`** — teoría de entrenamiento (coste, gradiente, backprop), **CNN**, **data augmentation**, **transfer learning**, **frameworks** (TensorFlow, Keras, PyTorch, JAX) y **aspectos prácticos** (activaciones, BatchNorm, regularización), enlazados al código del proyecto.
+
+## 13. Enlace de colab
+https://colab.research.google.com/drive/1BvtUT08zLA-mb-Pazveou2R1PpEZakpN?authuser=1#scrollTo=ZWA76CLUmKnS
