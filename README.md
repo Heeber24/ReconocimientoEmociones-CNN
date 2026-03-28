@@ -283,3 +283,6 @@ En la práctica: usa la **métrica en test** del script como referencia honesta 
 
 ## 13. Enlace de colab
 https://colab.research.google.com/drive/1BvtUT08zLA-mb-Pazveou2R1PpEZakpN?authuser=1#scrollTo=ZWA76CLUmKnS
+
+## 14. Presentación 
+https://drive.google.com/file/d/1pzUJNWNmUYlu74NvGXl0bgRrmHj7Y9Ps/view?usp=sharing
